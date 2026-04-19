@@ -470,6 +470,8 @@ export default function Game() {
   const [showInterstitial, setShowInterstitial] = useState(false);
   const [showRewarded, setShowRewarded] = useState(false);
   const [reviveUsed, setReviveUsed] = useState(false);
+  const nearObstacleRef = useRef(false);
+  const [gameplayBannerVisible, setGameplayBannerVisible] = useState(true);
 
   // Theme milestone tracking (no difficulty ramp)
   const themeStepRef = useRef(0);
@@ -676,6 +678,18 @@ export default function Game() {
           return obs.x + OBSTACLE_WIDTH > -10;
         });
 
+        // Gameplay banner: hide when any obstacle is within 220px of the turtle
+        {
+          const dangerZone = 220;
+          const isNear = obstaclesRef.current.some(
+            (obs) => obs.x - TURTLE_X < dangerZone && obs.x + OBSTACLE_WIDTH > TURTLE_X - TURTLE_SIZE
+          );
+          if (isNear !== nearObstacleRef.current) {
+            nearObstacleRef.current = isNear;
+            setGameplayBannerVisible(!isNear);
+          }
+        }
+
         trashItemsRef.current = trashItemsRef.current.filter((t)=>{
           t.x -= TRASH_SPEED;
           const dx = TURTLE_X - t.x; const dy = turtle.y - (t.y + Math.sin(tick*0.025+t.phase)*8);
@@ -794,6 +808,21 @@ export default function Game() {
           onPointerDown={handleTap}
         />
 
+        {/* Gameplay banner — compact strip at top, auto-hides near obstacles */}
+        <BannerAd
+          visible={uiState === "playing" && gameplayBannerVisible && !showInterstitial && !showRewarded}
+          position="top"
+          offset={4}
+          compact
+        />
+
+        {/* Menu banner — full-size strip at bottom on idle/dead screens */}
+        <BannerAd
+          visible={(uiState === "idle" || uiState === "dead") && !showDonate && !showInterstitial && !showRewarded}
+          position="bottom"
+          offset={4}
+        />
+
         {uiState !== "playing" && !showDonate && !showInterstitial && !showRewarded && (
           <button
             className="no-jump"
@@ -837,8 +866,6 @@ export default function Game() {
           </button>
         )}
 
-        {/* Banner ad — idle and dead screens, never during gameplay */}
-        <BannerAd visible={(uiState === "idle" || uiState === "dead") && !showDonate && !showInterstitial && !showRewarded} bottom={4} />
 
         {donateResult && (
           <div className="no-jump" style={{
