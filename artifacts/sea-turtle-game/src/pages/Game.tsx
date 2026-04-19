@@ -78,8 +78,8 @@ function drawTurtle(ctx: CanvasRenderingContext2D, x: number, y: number, angle: 
   ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
   const s = size / 46;
   const glowing = themeIdx === 5;
-  const OL = "rgba(0,0,0,0.92)";
-  const olW = 3.5 * s;
+  const OL = "rgba(0,0,0,0.85)";
+  const olW = 1.2 * s;
 
   // Flippers first (behind shell)
   const flipperColor = glowing ? "#00c880" : "#2d8a4e";
