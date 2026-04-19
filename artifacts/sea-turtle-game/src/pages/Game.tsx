@@ -470,6 +470,7 @@ export default function Game() {
   // Ad system
   const lastInterstitialTimeRef = useRef(0);   // timestamp of last shown interstitial
   const pendingRestartRef = useRef(false);      // restart is waiting for interstitial to close
+  const revivePosRef = useRef(CANVAS_HEIGHT / 2); // turtle Y position at time of death
   const [showInterstitial, setShowInterstitial] = useState(false);
   const [showRewarded, setShowRewarded] = useState(false);
   const [reviveUsed, setReviveUsed] = useState(false);
@@ -589,8 +590,8 @@ export default function Game() {
 
   const revive = useCallback(() => {
     const turtle = turtleRef.current;
-    turtle.y = CANVAS_HEIGHT / 2;
-    turtle.vy = JUMP_FORCE * 0.5;
+    turtle.y = revivePosRef.current; // resume from exact death position
+    turtle.vy = JUMP_FORCE * 0.4;   // gentle upward nudge so player has time to react
     turtle.angle = -0.1;
     deathCooldownRef.current = 0;
     stateRef.current = "playing";
@@ -635,6 +636,7 @@ export default function Game() {
         if (turtle.y - TURTLE_SIZE/2 < 0) { turtle.y=TURTLE_SIZE/2; turtle.vy=1; }
 
         if (turtle.y + TURTLE_SIZE/2 > CANVAS_HEIGHT-20) {
+          revivePosRef.current = turtle.y;
           spawnParticles(TURTLE_X, turtle.y); stateRef.current="dead"; deathCooldownRef.current=60;
           if (scoreRef.current>bestRef.current) bestRef.current=scoreRef.current;
           setUiState("dead");
@@ -691,6 +693,7 @@ export default function Game() {
           if (inXRange) {
             const topEdge = obs.gapY - obs.gap/2; const botEdge = obs.gapY + obs.gap/2;
             if (turtle.y-hitR < topEdge || turtle.y+hitR > botEdge) {
+              revivePosRef.current = turtle.y;
               spawnParticles(TURTLE_X, turtle.y); stateRef.current="dead"; deathCooldownRef.current=60;
               if (scoreRef.current>bestRef.current) bestRef.current=scoreRef.current;
               setUiState("dead");
@@ -865,7 +868,7 @@ export default function Game() {
           </button>
         )}
 
-        {/* Watch Ad for Second Chance — shown once per game on death */}
+        {/* Rewarded ad offer — shown once per run on death */}
         {uiState === "dead" && !reviveUsed && !showDonate && !showInterstitial && !showRewarded && (
           <button
             className="no-jump"
@@ -875,15 +878,15 @@ export default function Game() {
               bottom: 92,
               left:"50%", transform:"translateX(-50%)",
               background:"linear-gradient(135deg,#1a2e50,#0d1a30)",
-              border:"1.5px solid rgba(100,180,255,0.45)",
+              border:"1.5px solid rgba(100,180,255,0.5)",
               borderRadius:20, color:"rgba(160,210,255,0.95)",
-              padding:"8px 20px", fontSize:13, fontWeight:600,
+              padding:"9px 22px", fontSize:13, fontWeight:700,
               fontFamily:"'Segoe UI',sans-serif", cursor:"pointer",
               whiteSpace:"nowrap", letterSpacing:"0.01em",
-              boxShadow:"0 0 16px rgba(100,180,255,0.15)",
+              boxShadow:"0 0 20px rgba(100,180,255,0.2)",
             }}
           >
-            📺 Watch Ad for Second Chance
+            ❤️ Watch Ad — Continue from Here
           </button>
         )}
 

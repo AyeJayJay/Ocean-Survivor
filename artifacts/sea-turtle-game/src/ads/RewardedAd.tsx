@@ -24,7 +24,7 @@ interface Props {
   onComplete: (rewarded: boolean) => void;
 }
 
-type Phase = "loading" | "watching" | "reward" | "failed";
+type Phase = "loading" | "preroll" | "watching" | "reward" | "failed";
 
 export default function RewardedAd({ onComplete }: Props) {
   const [phase, setPhase] = useState<Phase>("loading");
@@ -35,7 +35,7 @@ export default function RewardedAd({ onComplete }: Props) {
   useEffect(() => {
     const t = setTimeout(() => {
       if (Math.random() > 0.02) {
-        setPhase("watching");
+        setPhase("preroll");
       } else {
         setPhase("failed");
       }
@@ -62,27 +62,33 @@ export default function RewardedAd({ onComplete }: Props) {
   const canSkip = elapsed >= SKIP_AFTER;
   const remaining = VIDEO_DURATION - elapsed;
 
+  const overlayBase: React.CSSProperties = {
+    position: "absolute", inset: 0, zIndex: 300,
+    display: "flex", flexDirection: "column",
+    alignItems: "center", justifyContent: "center",
+    background: (phase === "loading" || phase === "preroll" || phase === "failed")
+      ? "rgba(2,8,18,0.97)"
+      : ad.bg,
+    transition: "background 0.4s",
+  };
+
   return (
     <div
       className="no-jump"
-      style={{
-        position: "absolute", inset: 0, zIndex: 300,
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        background: phase === "loading" ? "rgba(0,0,0,0.95)" : ad.bg,
-        transition: "background 0.4s",
-      }}
+      style={overlayBase}
       onPointerDown={(e) => e.stopPropagation()}
     >
+      {/* ── LOADING ── */}
       {phase === "loading" && (
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, fontFamily: "'Segoe UI', sans-serif" }}>
-            Loading rewarded ad…
+          <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, fontFamily: "'Segoe UI', sans-serif" }}>
+            Loading ad…
           </div>
         </div>
       )}
 
+      {/* ── FAILED ── */}
       {phase === "failed" && (
         <div style={{ textAlign: "center", padding: "0 32px" }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>😔</div>
@@ -96,6 +102,90 @@ export default function RewardedAd({ onComplete }: Props) {
         </div>
       )}
 
+      {/* ── PRE-ROLL: show reward BEFORE video starts ── */}
+      {phase === "preroll" && (
+        <div style={{ textAlign: "center", padding: "0 28px", maxWidth: 360 }}>
+          <div style={{ fontSize: 58, marginBottom: 10 }}>🐢</div>
+
+          <h2 style={{
+            color: "white", margin: "0 0 6px",
+            fontSize: 20, fontWeight: 800,
+            fontFamily: "'Segoe UI', sans-serif",
+            letterSpacing: "-0.01em",
+          }}>
+            Second Chance Available!
+          </h2>
+
+          <p style={{
+            color: "rgba(160,220,190,0.85)", margin: "0 0 20px",
+            fontSize: 13, fontFamily: "'Segoe UI', sans-serif", lineHeight: 1.55,
+          }}>
+            Watch a short 15-second ad and your turtle will<br />
+            <strong style={{ color: "rgba(100,255,160,1)" }}>continue from exactly where it died.</strong>
+          </p>
+
+          {/* Reward summary card */}
+          <div style={{
+            background: "rgba(255,255,255,0.07)",
+            border: "1px solid rgba(100,255,160,0.25)",
+            borderRadius: 12, padding: "14px 20px",
+            marginBottom: 22, textAlign: "left",
+          }}>
+            <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontFamily: "'Segoe UI', sans-serif", letterSpacing: "0.08em", marginBottom: 8 }}>
+              YOUR REWARD
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 24 }}>❤️</span>
+              <div>
+                <div style={{ color: "white", fontWeight: 700, fontSize: 14, fontFamily: "'Segoe UI', sans-serif" }}>
+                  Extra Life
+                </div>
+                <div style={{ color: "rgba(180,220,200,0.7)", fontSize: 12, fontFamily: "'Segoe UI', sans-serif" }}>
+                  Resume from your death position
+                </div>
+              </div>
+            </div>
+            <div style={{
+              marginTop: 12, paddingTop: 10,
+              borderTop: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.3)", fontSize: 10,
+              fontFamily: "'Segoe UI', sans-serif",
+            }}>
+              One-time use per run · Reward granted only after full watch
+            </div>
+          </div>
+
+          <button
+            onClick={() => setPhase("watching")}
+            style={{
+              background: "linear-gradient(135deg,#1e7aff,#0d4aaa)",
+              border: "none", borderRadius: 24,
+              color: "white", padding: "13px 36px",
+              fontSize: 15, fontWeight: 700,
+              fontFamily: "'Segoe UI', sans-serif",
+              cursor: "pointer", width: "100%",
+              boxShadow: "0 4px 20px rgba(30,122,255,0.35)",
+              marginBottom: 10,
+            }}
+          >
+            📺 Watch Ad (15 sec)
+          </button>
+
+          <button
+            onClick={() => onComplete(false)}
+            style={{
+              background: "none", border: "none",
+              color: "rgba(255,255,255,0.3)", fontSize: 12,
+              fontFamily: "'Segoe UI', sans-serif",
+              cursor: "pointer", padding: "6px",
+            }}
+          >
+            No thanks
+          </button>
+        </div>
+      )}
+
+      {/* ── WATCHING ── */}
       {phase === "watching" && (
         <>
           <div style={{
@@ -132,7 +222,7 @@ export default function RewardedAd({ onComplete }: Props) {
               <div style={{ height: "100%", width: `${progress * 100}%`, background: ad.accent, borderRadius: 6, transition: "width 0.9s linear" }} />
             </div>
             <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "'Segoe UI', sans-serif" }}>
-              {remaining > 0 ? `Watch ${remaining}s more to earn your reward` : "Almost done!"}
+              {remaining > 0 ? `${remaining}s remaining — keep watching to earn your extra life` : "Almost done!"}
             </div>
           </div>
 
@@ -141,19 +231,20 @@ export default function RewardedAd({ onComplete }: Props) {
             fontSize: 9, color: "rgba(255,255,255,0.2)",
             fontFamily: "'Segoe UI', sans-serif",
           }}>
-            Watch the full ad to earn your second chance 🐢
+            Reward: Extra Life — resume from your death position 🐢
           </div>
         </>
       )}
 
+      {/* ── REWARD GRANTED ── */}
       {phase === "reward" && (
         <div style={{ textAlign: "center", padding: "0 32px", maxWidth: 380 }}>
           <div style={{ fontSize: 64, marginBottom: 14 }}>🐢</div>
           <h2 style={{ color: "white", margin: "0 0 8px", fontSize: 22, fontFamily: "'Segoe UI', sans-serif", fontWeight: 700 }}>
-            Second Chance!
+            Extra Life Earned!
           </h2>
           <p style={{ color: "rgba(180,230,200,0.8)", margin: "0 0 24px", fontSize: 14, fontFamily: "'Segoe UI', sans-serif", lineHeight: 1.5 }}>
-            Your turtle lives on — keep swimming!
+            Your turtle picks up right where it left off.<br />Keep swimming!
           </p>
           <button
             onClick={() => onComplete(true)}
