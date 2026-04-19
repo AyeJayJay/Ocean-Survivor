@@ -3,6 +3,7 @@ import DonateModal from "./DonateModal";
 import BannerAd from "../ads/BannerAd";
 import InterstitialAd from "../ads/InterstitialAd";
 import RewardedAd from "../ads/RewardedAd";
+import { adFrequencyManager } from "../ads/AdFrequencyManager";
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 640;
@@ -20,8 +21,6 @@ const BASE_GAP      = 170;
 const BASE_INTERVAL = 1600;
 // Themes still cycle on milestones (alternating 15 → 20 → 15 → 20…)
 const MILESTONE_PATTERN = [15, 20];
-// Minimum ms between interstitial ads (2.5 minutes)
-const MIN_INTERSTITIAL_INTERVAL = 150_000;
 
 // ─────────────────────────────────────────────
 // THEME DEFINITIONS
@@ -468,8 +467,7 @@ export default function Game() {
   const themeNameAlphaRef = useRef(0);
 
   // Ad system
-  const lastInterstitialTimeRef = useRef(0);   // timestamp of last shown interstitial
-  const pendingRestartRef = useRef(false);      // restart is waiting for interstitial to close
+  const pendingRestartRef = useRef(false); // restart is waiting for interstitial to close
   const revivePosRef = useRef(CANVAS_HEIGHT / 2); // turtle Y position at time of death
   const [showInterstitial, setShowInterstitial] = useState(false);
   const [showRewarded, setShowRewarded] = useState(false);
@@ -556,11 +554,11 @@ export default function Game() {
     setUiState("playing");
   }, [initAmbientForTheme]);
 
-  // Show an interstitial if the cooldown has elapsed; returns true if shown.
+  // Show an interstitial if the frequency manager permits it.
   const tryShowInterstitial = useCallback((): boolean => {
-    const now = Date.now();
-    if (now - lastInterstitialTimeRef.current >= MIN_INTERSTITIAL_INTERVAL) {
-      lastInterstitialTimeRef.current = now;
+    const decision = adFrequencyManager.canShowInterstitial();
+    if (decision.allowed) {
+      adFrequencyManager.recordInterstitial();
       setShowInterstitial(true);
       return true;
     }
@@ -595,6 +593,7 @@ export default function Game() {
     turtle.angle = -0.1;
     deathCooldownRef.current = 0;
     stateRef.current = "playing";
+    adFrequencyManager.recordRewardedAd(); // suppress interstitials for 3 min after reward
     setReviveUsed(true);
     setUiState("playing");
   }, []);
