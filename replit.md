@@ -16,6 +16,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Artifacts
+
+### Sea Turtle Dash (`/`)
+- Flappy Bird-style underwater game
+- Canvas-based rendering (HTML5 Canvas API)
+- React + Vite, no backend required
+- Features: sea turtle player, coral obstacle pillars, bubbles, ocean floor, particles, god rays
+- Controls: tap or spacebar to swim
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages

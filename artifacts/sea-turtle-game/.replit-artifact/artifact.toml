@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Sea Turtle Dash"
+version = "1.0.0"
+id = "artifacts/sea-turtle-game"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22880
+
+[services.development]
+run = "pnpm --filter @workspace/sea-turtle-game run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sea-turtle-game", "run", "build" ]
+publicDir = "artifacts/sea-turtle-game/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22880"
+BASE_PATH = "/"
