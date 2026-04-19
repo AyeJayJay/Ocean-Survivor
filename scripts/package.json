@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "seed-donations": "tsx ./src/seed-donations.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "stripe": "*",
+    "stripe-replit-sync": "*",
     "tsx": "catalog:"
   }
 }
