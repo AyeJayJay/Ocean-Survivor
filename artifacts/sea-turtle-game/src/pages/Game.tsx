@@ -20,6 +20,8 @@ const BASE_GAP      = 170;
 const BASE_INTERVAL = 1600;
 // Themes still cycle on milestones (alternating 15 → 20 → 15 → 20…)
 const MILESTONE_PATTERN = [15, 20];
+// Minimum ms between interstitial ads (2.5 minutes)
+const MIN_INTERSTITIAL_INTERVAL = 150_000;
 
 // ─────────────────────────────────────────────
 // THEME DEFINITIONS
@@ -466,7 +468,8 @@ export default function Game() {
   const themeNameAlphaRef = useRef(0);
 
   // Ad system
-  const deathCountRef = useRef(0);
+  const lastInterstitialTimeRef = useRef(0);   // timestamp of last shown interstitial
+  const pendingRestartRef = useRef(false);      // restart is waiting for interstitial to close
   const [showInterstitial, setShowInterstitial] = useState(false);
   const [showRewarded, setShowRewarded] = useState(false);
   const [reviveUsed, setReviveUsed] = useState(false);
@@ -552,15 +555,37 @@ export default function Game() {
     setUiState("playing");
   }, [initAmbientForTheme]);
 
+  // Show an interstitial if the cooldown has elapsed; returns true if shown.
+  const tryShowInterstitial = useCallback((): boolean => {
+    const now = Date.now();
+    if (now - lastInterstitialTimeRef.current >= MIN_INTERSTITIAL_INTERVAL) {
+      lastInterstitialTimeRef.current = now;
+      setShowInterstitial(true);
+      return true;
+    }
+    return false;
+  }, []);
+
+  // Attempt restart: gate on interstitial cooldown at this natural transition point.
+  const attemptRestart = useCallback(() => {
+    if (deathCooldownRef.current > 0) return;
+    const adShown = tryShowInterstitial();
+    if (adShown) {
+      pendingRestartRef.current = true; // resetGame fires when the ad closes
+    } else {
+      resetGame();
+    }
+  }, [tryShowInterstitial, resetGame]);
+
   const jump = useCallback(() => {
     if (stateRef.current==="idle") { resetGame(); return; }
-    if (stateRef.current==="dead") { if (deathCooldownRef.current>0) return; resetGame(); return; }
+    if (stateRef.current==="dead") { attemptRestart(); return; }
     if (stateRef.current==="playing") {
       turtleRef.current.vy = JUMP_FORCE;
       const theme = THEMES[themeIdxRef.current];
       for (let i=0;i<5;i++) particlesRef.current.push({x:TURTLE_X,y:turtleRef.current.y,vx:-1-Math.random()*2,vy:-1-Math.random()*2,alpha:0.8,color:theme.particleColors[0],size:2+Math.random()*3});
     }
-  }, [resetGame]);
+  }, [resetGame, attemptRestart]);
 
   const revive = useCallback(() => {
     const turtle = turtleRef.current;
@@ -612,9 +637,7 @@ export default function Game() {
         if (turtle.y + TURTLE_SIZE/2 > CANVAS_HEIGHT-20) {
           spawnParticles(TURTLE_X, turtle.y); stateRef.current="dead"; deathCooldownRef.current=60;
           if (scoreRef.current>bestRef.current) bestRef.current=scoreRef.current;
-          deathCountRef.current++;
           setUiState("dead");
-          if (deathCountRef.current % 3 === 0) setShowInterstitial(true);
         }
 
         if (timestamp - lastObstacleTimeRef.current > BASE_INTERVAL) {
@@ -670,9 +693,7 @@ export default function Game() {
             if (turtle.y-hitR < topEdge || turtle.y+hitR > botEdge) {
               spawnParticles(TURTLE_X, turtle.y); stateRef.current="dead"; deathCooldownRef.current=60;
               if (scoreRef.current>bestRef.current) bestRef.current=scoreRef.current;
-              deathCountRef.current++;
               setUiState("dead");
-              if (deathCountRef.current % 3 === 0) setShowInterstitial(true);
             }
           }
           return obs.x + OBSTACLE_WIDTH > -10;
@@ -883,9 +904,15 @@ export default function Game() {
 
         {showDonate && <DonateModal onClose={() => setShowDonate(false)} />}
 
-        {/* Interstitial — shown every 3rd death, overlays the game-over screen */}
+        {/* Interstitial — shown at restart transition, max once per 2.5 min */}
         {showInterstitial && (
-          <InterstitialAd onClose={() => setShowInterstitial(false)} />
+          <InterstitialAd onClose={() => {
+            setShowInterstitial(false);
+            if (pendingRestartRef.current) {
+              pendingRestartRef.current = false;
+              resetGame();
+            }
+          }} />
         )}
 
         {/* Rewarded ad — user-triggered, grants a one-time revive */}

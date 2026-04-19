@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
 /*
- * InterstitialAd — full-screen ad shown between game sessions (every Nth death)
+ * InterstitialAd — full-screen ad shown at natural restart transitions (max once per 2.5 min)
  *
  * To integrate a real network, replace the simulated content with:
  *   AdMob:  window.admob.showInterstitial()
