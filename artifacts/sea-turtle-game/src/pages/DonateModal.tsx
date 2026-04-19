@@ -202,7 +202,11 @@ export default function DonateModal({ onClose }: Props) {
         Learn more at conserveturtles.org ↗
       </a>
 
-      <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 10, fontFamily: "'Segoe UI', sans-serif", marginTop: 12, textAlign: "center" }}>
+      <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, fontFamily: "'Segoe UI', sans-serif", marginTop: 14, textAlign: "center", lineHeight: 1.5, maxWidth: 360 }}>
+        Donations made through this app support ocean and sea turtle conservation. A portion of each donation is used to cover app development, maintenance, and operational costs, with the remainder contributed to conservation efforts.
+      </p>
+
+      <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 10, fontFamily: "'Segoe UI', sans-serif", marginTop: 8, textAlign: "center" }}>
         Powered by Stripe · Secure & encrypted
       </p>
     </div>
