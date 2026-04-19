@@ -11,19 +11,12 @@ const OBSTACLE_WIDTH = 62;
 const TRASH_SPEED = 1.2;
 const TRASH_INTERVAL = 2600;
 
-// Difficulty ramps up at each milestone (alternating 15 → 20 → 15 → 20…)
+// Fixed Flappy Bird-style difficulty — no ramping
+const BASE_SPEED    = 3.0;
+const BASE_GAP      = 170;
+const BASE_INTERVAL = 1600;
+// Themes still cycle on milestones (alternating 15 → 20 → 15 → 20…)
 const MILESTONE_PATTERN = [15, 20];
-const DIFFICULTY_STEPS = [
-  { speed: 2.8,  gap: 175, interval: 1700 },
-  { speed: 3.15, gap: 163, interval: 1580 },
-  { speed: 3.5,  gap: 151, interval: 1470 },
-  { speed: 3.9,  gap: 140, interval: 1360 },
-  { speed: 4.3,  gap: 130, interval: 1250 },
-  { speed: 4.75, gap: 120, interval: 1140 },
-  { speed: 5.2,  gap: 112, interval: 1040 },
-  { speed: 5.65, gap: 106, interval:  950 },
-  { speed: 6.1,  gap: 102, interval:  870 },
-];
 
 // ─────────────────────────────────────────────
 // THEME DEFINITIONS
@@ -85,29 +78,44 @@ function drawTurtle(ctx: CanvasRenderingContext2D, x: number, y: number, angle: 
   ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
   const s = size / 46;
   const glowing = themeIdx === 5;
+  const OL = "rgba(0,0,0,0.92)";
+  const olW = 3.5 * s;
+
+  // Flippers first (behind shell)
+  const flipperColor = glowing ? "#00c880" : "#2d8a4e";
+  ctx.strokeStyle = OL; ctx.lineWidth = olW;
+  ctx.fillStyle = flipperColor;
+  ctx.beginPath(); ctx.ellipse(10*s,-16*s,5*s,10*s,-0.4,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(10*s,16*s,5*s,10*s,0.4,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(-12*s,-14*s,4*s,8*s,0.5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(-12*s,14*s,4*s,8*s,-0.5,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(-20*s,0,5*s,3*s,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+  // Shell
   ctx.shadowColor = glowing ? "#00ffb0" : "rgba(0,0,0,0.35)";
   ctx.shadowBlur = glowing ? 16 : 10;
   const shellGrad = ctx.createRadialGradient(-2*s,-4*s,2*s,0,0,18*s);
   shellGrad.addColorStop(0, glowing ? "#60ffc0" : "#4dc47a");
   shellGrad.addColorStop(0.5, glowing ? "#00d890" : "#2d8a4e");
   shellGrad.addColorStop(1, glowing ? "#00804a" : "#1a5c33");
-  ctx.fillStyle = shellGrad;
-  ctx.beginPath(); ctx.ellipse(0,0,18*s,14*s,0,0,Math.PI*2); ctx.fill();
-  ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(0,0,0,0.25)"; ctx.lineWidth = 1.5*s;
+  ctx.fillStyle = shellGrad; ctx.strokeStyle = OL; ctx.lineWidth = olW;
+  ctx.beginPath(); ctx.ellipse(0,0,18*s,14*s,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(0,0,0,0.25)"; ctx.lineWidth = 1.5*s;
   ctx.beginPath(); ctx.ellipse(0,0,7*s,5.5*s,0,0,Math.PI*2); ctx.stroke();
   for (let i = 0; i < 5; i++) { const ang = (i/5)*Math.PI*2; ctx.beginPath(); ctx.moveTo(Math.cos(ang)*7*s,Math.sin(ang)*5.5*s); ctx.lineTo(Math.cos(ang)*16*s,Math.sin(ang)*12*s); ctx.stroke(); }
+
+  // Head
   if (glowing) { ctx.shadowColor = "#00ffb0"; ctx.shadowBlur = 12; }
   const headGrad = ctx.createRadialGradient(20*s,-2*s,1*s,20*s,-1*s,9*s);
   headGrad.addColorStop(0, glowing ? "#a0ffd0" : "#7ee8a0"); headGrad.addColorStop(1, glowing ? "#00c070" : "#3dab60");
-  ctx.fillStyle = headGrad; ctx.beginPath(); ctx.ellipse(20*s,-1*s,9*s,7.5*s,0.2,0,Math.PI*2); ctx.fill();
-  ctx.shadowBlur = 0; ctx.fillStyle = "#1a1a2e"; ctx.beginPath(); ctx.arc(25*s,-4*s,2.5*s,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = headGrad; ctx.strokeStyle = OL; ctx.lineWidth = olW;
+  ctx.beginPath(); ctx.ellipse(20*s,-1*s,9*s,7.5*s,0.2,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Eye
+  ctx.fillStyle = "#1a1a2e"; ctx.beginPath(); ctx.arc(25*s,-4*s,2.5*s,0,Math.PI*2); ctx.fill();
   ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(25.8*s,-4.8*s,1*s,0,Math.PI*2); ctx.fill();
-  const flipperColor = glowing ? "#00c880" : "#2d8a4e"; ctx.fillStyle = flipperColor;
-  ctx.beginPath(); ctx.ellipse(10*s,-16*s,5*s,10*s,-0.4,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(10*s,16*s,5*s,10*s,0.4,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-12*s,-14*s,4*s,8*s,0.5,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-12*s,14*s,4*s,8*s,-0.5,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-20*s,0,5*s,3*s,0,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
@@ -454,13 +462,10 @@ export default function Game() {
   const themeNameRef = useRef<string|null>(null);
   const themeNameAlphaRef = useRef(0);
 
-  // Difficulty / milestone
-  const difficultyStepRef = useRef(0);
+  // Theme milestone tracking (no difficulty ramp)
+  const themeStepRef = useRef(0);
   const nextMilestoneRef = useRef(MILESTONE_PATTERN[0]);
   const milestoneAltIdxRef = useRef(1);
-  const currentSpeedRef = useRef(DIFFICULTY_STEPS[0].speed);
-  const currentGapRef = useRef(DIFFICULTY_STEPS[0].gap);
-  const currentIntervalRef = useRef(DIFFICULTY_STEPS[0].interval);
 
   // Ambient particles — two sets so both sides can display during wipe
   const jelliesRef = useRef<Jellyfish[]>([]);
@@ -526,13 +531,9 @@ export default function Game() {
     trashItemsRef.current = []; floatTextsRef.current = []; trashCountRef.current = 0;
     themeIdxRef.current = 0; prevThemeIdxRef.current = 0;
     themeWipeXRef.current = null; themeNameRef.current = null; themeNameAlphaRef.current = 0;
-    difficultyStepRef.current = 0;
+    themeStepRef.current = 0;
     nextMilestoneRef.current = MILESTONE_PATTERN[0];
     milestoneAltIdxRef.current = 1;
-    const d0 = DIFFICULTY_STEPS[0];
-    currentSpeedRef.current = d0.speed;
-    currentGapRef.current = d0.gap;
-    currentIntervalRef.current = d0.interval;
     prevJelliesRef.current = []; prevEmbersRef.current = []; prevFlakesRef.current = []; prevAnglerLightsRef.current = [];
     initAmbientForTheme(0);
     stateRef.current = "playing";
@@ -569,7 +570,7 @@ export default function Game() {
       if (curTheme.ambient==="snowflakes") flakesRef.current.forEach((f)=>{f.y+=f.speed;f.x+=Math.sin(tick*0.02+f.phase)*0.5;if(f.y>CANVAS_HEIGHT+f.r){f.y=-f.r;f.x=Math.random()*CANVAS_WIDTH;}});
 
       if (state === "playing") {
-        const spd = currentSpeedRef.current;
+        const spd = BASE_SPEED;
 
         // Advance the biome wipe boundary at game speed
         if (themeWipeXRef.current !== null) {
@@ -591,8 +592,8 @@ export default function Game() {
           setUiState("dead");
         }
 
-        if (timestamp - lastObstacleTimeRef.current > currentIntervalRef.current) {
-          const gap = currentGapRef.current;
+        if (timestamp - lastObstacleTimeRef.current > BASE_INTERVAL) {
+          const gap = BASE_GAP;
           const minGapY = gap/2 + 60; const maxGapY = CANVAS_HEIGHT - gap/2 - 60;
           obstaclesRef.current.push({
             x: CANVAS_WIDTH + OBSTACLE_WIDTH,
@@ -617,17 +618,13 @@ export default function Game() {
             scoreRef.current++;
 
             if (scoreRef.current >= nextMilestoneRef.current) {
-              difficultyStepRef.current++;
-              const step = DIFFICULTY_STEPS[Math.min(difficultyStepRef.current, DIFFICULTY_STEPS.length - 1)];
-              currentSpeedRef.current = step.speed;
-              currentGapRef.current   = step.gap;
-              currentIntervalRef.current = step.interval;
+              themeStepRef.current++;
 
               const nextSize = MILESTONE_PATTERN[milestoneAltIdxRef.current];
               nextMilestoneRef.current += nextSize;
               milestoneAltIdxRef.current = (milestoneAltIdxRef.current + 1) % MILESTONE_PATTERN.length;
 
-              const newThemeIdx = Math.min(difficultyStepRef.current, THEMES.length - 1);
+              const newThemeIdx = Math.min(themeStepRef.current, THEMES.length - 1);
               if (newThemeIdx !== themeIdxRef.current) {
                 prevThemeIdxRef.current = themeIdxRef.current;
                 themeIdxRef.current = newThemeIdx;
