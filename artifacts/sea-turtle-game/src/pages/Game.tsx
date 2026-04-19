@@ -1,5 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import DonateModal from "./DonateModal";
+import BannerAd from "../ads/BannerAd";
+import InterstitialAd from "../ads/InterstitialAd";
+import RewardedAd from "../ads/RewardedAd";
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 640;
@@ -462,6 +465,12 @@ export default function Game() {
   const themeNameRef = useRef<string|null>(null);
   const themeNameAlphaRef = useRef(0);
 
+  // Ad system
+  const deathCountRef = useRef(0);
+  const [showInterstitial, setShowInterstitial] = useState(false);
+  const [showRewarded, setShowRewarded] = useState(false);
+  const [reviveUsed, setReviveUsed] = useState(false);
+
   // Theme milestone tracking (no difficulty ramp)
   const themeStepRef = useRef(0);
   const nextMilestoneRef = useRef(MILESTONE_PATTERN[0]);
@@ -534,6 +543,7 @@ export default function Game() {
     themeStepRef.current = 0;
     nextMilestoneRef.current = MILESTONE_PATTERN[0];
     milestoneAltIdxRef.current = 1;
+    setReviveUsed(false);
     prevJelliesRef.current = []; prevEmbersRef.current = []; prevFlakesRef.current = []; prevAnglerLightsRef.current = [];
     initAmbientForTheme(0);
     stateRef.current = "playing";
@@ -549,6 +559,17 @@ export default function Game() {
       for (let i=0;i<5;i++) particlesRef.current.push({x:TURTLE_X,y:turtleRef.current.y,vx:-1-Math.random()*2,vy:-1-Math.random()*2,alpha:0.8,color:theme.particleColors[0],size:2+Math.random()*3});
     }
   }, [resetGame]);
+
+  const revive = useCallback(() => {
+    const turtle = turtleRef.current;
+    turtle.y = CANVAS_HEIGHT / 2;
+    turtle.vy = JUMP_FORCE * 0.5;
+    turtle.angle = -0.1;
+    deathCooldownRef.current = 0;
+    stateRef.current = "playing";
+    setReviveUsed(true);
+    setUiState("playing");
+  }, []);
 
   useEffect(() => {
     initBubbles(); initAmbientForTheme(0);
@@ -589,7 +610,9 @@ export default function Game() {
         if (turtle.y + TURTLE_SIZE/2 > CANVAS_HEIGHT-20) {
           spawnParticles(TURTLE_X, turtle.y); stateRef.current="dead"; deathCooldownRef.current=60;
           if (scoreRef.current>bestRef.current) bestRef.current=scoreRef.current;
+          deathCountRef.current++;
           setUiState("dead");
+          if (deathCountRef.current % 3 === 0) setShowInterstitial(true);
         }
 
         if (timestamp - lastObstacleTimeRef.current > BASE_INTERVAL) {
@@ -645,7 +668,9 @@ export default function Game() {
             if (turtle.y-hitR < topEdge || turtle.y+hitR > botEdge) {
               spawnParticles(TURTLE_X, turtle.y); stateRef.current="dead"; deathCooldownRef.current=60;
               if (scoreRef.current>bestRef.current) bestRef.current=scoreRef.current;
+              deathCountRef.current++;
               setUiState("dead");
+              if (deathCountRef.current % 3 === 0) setShowInterstitial(true);
             }
           }
           return obs.x + OBSTACLE_WIDTH > -10;
@@ -769,7 +794,7 @@ export default function Game() {
           onPointerDown={handleTap}
         />
 
-        {uiState !== "playing" && !showDonate && (
+        {uiState !== "playing" && !showDonate && !showInterstitial && !showRewarded && (
           <button
             className="no-jump"
             onPointerDown={(e) => { e.stopPropagation(); setShowDonate(true); }}
@@ -790,6 +815,31 @@ export default function Game() {
           </button>
         )}
 
+        {/* Watch Ad for Second Chance — shown once per game on death */}
+        {uiState === "dead" && !reviveUsed && !showDonate && !showInterstitial && !showRewarded && (
+          <button
+            className="no-jump"
+            onPointerDown={(e) => { e.stopPropagation(); setShowRewarded(true); }}
+            style={{
+              position:"absolute",
+              bottom: 92,
+              left:"50%", transform:"translateX(-50%)",
+              background:"linear-gradient(135deg,#1a2e50,#0d1a30)",
+              border:"1.5px solid rgba(100,180,255,0.45)",
+              borderRadius:20, color:"rgba(160,210,255,0.95)",
+              padding:"8px 20px", fontSize:13, fontWeight:600,
+              fontFamily:"'Segoe UI',sans-serif", cursor:"pointer",
+              whiteSpace:"nowrap", letterSpacing:"0.01em",
+              boxShadow:"0 0 16px rgba(100,180,255,0.15)",
+            }}
+          >
+            📺 Watch Ad for Second Chance
+          </button>
+        )}
+
+        {/* Banner ad — idle and dead screens, never during gameplay */}
+        <BannerAd visible={(uiState === "idle" || uiState === "dead") && !showDonate && !showInterstitial && !showRewarded} bottom={4} />
+
         {donateResult && (
           <div className="no-jump" style={{
             position:"absolute", top:20, left:"50%", transform:"translateX(-50%)",
@@ -805,6 +855,21 @@ export default function Game() {
         )}
 
         {showDonate && <DonateModal onClose={() => setShowDonate(false)} />}
+
+        {/* Interstitial — shown every 3rd death, overlays the game-over screen */}
+        {showInterstitial && (
+          <InterstitialAd onClose={() => setShowInterstitial(false)} />
+        )}
+
+        {/* Rewarded ad — user-triggered, grants a one-time revive */}
+        {showRewarded && (
+          <RewardedAd
+            onComplete={(rewarded) => {
+              setShowRewarded(false);
+              if (rewarded) revive();
+            }}
+          />
+        )}
       </div>
     </div>
   );
