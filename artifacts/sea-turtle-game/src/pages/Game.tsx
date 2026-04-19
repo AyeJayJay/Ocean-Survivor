@@ -12,7 +12,7 @@ const TRASH_SPEED = 1.2;
 const TRASH_INTERVAL = 2600;
 
 // Difficulty ramps up at each milestone (alternating 15 → 20 → 15 → 20…)
-const MILESTONE_PATTERN = [15, 20]; // rotates indefinitely
+const MILESTONE_PATTERN = [15, 20];
 const DIFFICULTY_STEPS = [
   { speed: 2.8,  gap: 175, interval: 1700 },
   { speed: 3.15, gap: 163, interval: 1580 },
@@ -76,21 +76,6 @@ interface FloatText { x: number; y: number; text: string; alpha: number; vy: num
 // ─────────────────────────────────────────────
 
 function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
-function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
-function hexToRgb(hex: string): [number, number, number] { return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)]; }
-function lerpColor(c1: string, c2: string, t: number): string {
-  const [r1,g1,b1] = hexToRgb(c1); const [r2,g2,b2] = hexToRgb(c2);
-  return `rgb(${Math.round(lerp(r1,r2,t))},${Math.round(lerp(g1,g2,t))},${Math.round(lerp(b1,b2,t))})`;
-}
-function blendColors4(a: [string,string,string,string], b: [string,string,string,string], t: number): [string,string,string,string] {
-  return [lerpColor(a[0],b[0],t), lerpColor(a[1],b[1],t), lerpColor(a[2],b[2],t), lerpColor(a[3],b[3],t)];
-}
-function blendColors3(a: [string,string,string], b: [string,string,string], t: number): [string,string,string] {
-  return [lerpColor(a[0],b[0],t), lerpColor(a[1],b[1],t), lerpColor(a[2],b[2],t)];
-}
-function getDifficultyStep(step: number) {
-  return DIFFICULTY_STEPS[Math.min(step, DIFFICULTY_STEPS.length - 1)];
-}
 
 // ─────────────────────────────────────────────
 // DRAWING: TURTLE
@@ -132,11 +117,9 @@ function drawTurtle(ctx: CanvasRenderingContext2D, x: number, y: number, angle: 
 
 function drawTrashItem(ctx: CanvasRenderingContext2D, item: TrashItem, tick: number) {
   const wobbleY = Math.sin(tick * 0.025 + item.phase) * 8;
-  ctx.save();
-  ctx.translate(item.x, item.y + wobbleY);
+  ctx.save(); ctx.translate(item.x, item.y + wobbleY);
   ctx.rotate(item.rotation + Math.sin(tick * 0.018 + item.phase) * 0.08);
   ctx.globalAlpha = item.alpha;
-
   switch (item.type) {
     case "bottle": {
       ctx.fillStyle = "rgba(180,220,255,0.55)"; ctx.strokeStyle = "rgba(120,180,220,0.8)"; ctx.lineWidth = 1.2;
@@ -152,13 +135,9 @@ function drawTrashItem(ctx: CanvasRenderingContext2D, item: TrashItem, tick: num
       ctx.fillStyle = "rgba(240,245,255,0.35)"; ctx.strokeStyle = "rgba(200,220,255,0.6)"; ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, -14); ctx.bezierCurveTo(10, -10, 14, 0, 10, 10);
-      ctx.bezierCurveTo(6, 16, -6, 16, -10, 10);
-      ctx.bezierCurveTo(-14, 0, -10, -10, 0, -14);
+      ctx.bezierCurveTo(6, 16, -6, 16, -10, 10); ctx.bezierCurveTo(-14, 0, -10, -10, 0, -14);
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = "rgba(200,220,255,0.7)"; ctx.beginPath(); ctx.ellipse(0, -14, 3, 2, 0, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = "rgba(180,210,240,0.35)"; ctx.lineWidth = 0.8;
-      ctx.beginPath(); ctx.moveTo(-3, -8); ctx.quadraticCurveTo(0, 0, -2, 10); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(3, -8); ctx.quadraticCurveTo(1, 2, 3, 10); ctx.stroke();
       break;
     }
     case "can": {
@@ -170,8 +149,6 @@ function drawTrashItem(ctx: CanvasRenderingContext2D, item: TrashItem, tick: num
       ctx.beginPath(); ctx.ellipse(0, -10, 7, 2.5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.ellipse(0, 10, 7, 2.5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
       ctx.fillStyle = "rgba(200,40,40,0.7)"; ctx.fillRect(-6.5, -4, 13, 8);
-      ctx.strokeStyle = "rgba(150,160,170,0.9)"; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(2, -10); ctx.lineTo(5, -13); ctx.stroke();
       break;
     }
     case "straw": {
@@ -180,8 +157,6 @@ function drawTrashItem(ctx: CanvasRenderingContext2D, item: TrashItem, tick: num
       strawGrad.addColorStop(0, "rgba(255,140,30,0.85)"); strawGrad.addColorStop(0.5, "rgba(255,180,60,0.9)"); strawGrad.addColorStop(1, "rgba(255,120,20,0.8)");
       ctx.fillStyle = strawGrad; ctx.strokeStyle = "rgba(200,100,10,0.6)"; ctx.lineWidth = 0.8;
       ctx.beginPath(); ctx.rect(-2.5, -16, 5, 32); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "rgba(255,255,255,0.3)";
-      for (let s = -12; s < 16; s += 8) ctx.fillRect(-2.5, s, 5, 3);
       ctx.restore();
       break;
     }
@@ -202,12 +177,9 @@ function drawFloatTexts(ctx: CanvasRenderingContext2D, texts: FloatText[]) {
 // DRAWING: BACKGROUND
 // ─────────────────────────────────────────────
 
-function drawBackground(ctx: CanvasRenderingContext2D, w: number, h: number, scrollX: number, bubbles: Bubble[], theme: Theme, prevTheme: Theme, blend: number, tick: number) {
+function drawBackground(ctx: CanvasRenderingContext2D, w: number, h: number, scrollX: number, bubbles: Bubble[], theme: Theme, tick: number) {
   const bg = ctx.createLinearGradient(0, 0, 0, h);
-  theme.bgStops.forEach(([color, stop]) => {
-    const prevStop = prevTheme.bgStops.find(([,s]) => s === stop)?.[0] ?? color;
-    bg.addColorStop(stop, blend < 1 ? lerpColor(prevStop, color, blend) : color);
-  });
+  theme.bgStops.forEach(([color, stop]) => bg.addColorStop(stop, color));
   ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
 
   ctx.save();
@@ -231,8 +203,7 @@ function drawBackground(ctx: CanvasRenderingContext2D, w: number, h: number, scr
   });
 
   const floorGrad = ctx.createLinearGradient(0, h-60, 0, h);
-  floorGrad.addColorStop(0, blend < 1 ? lerpColor(prevTheme.floorTop, theme.floorTop, blend) : theme.floorTop);
-  floorGrad.addColorStop(1, blend < 1 ? lerpColor(prevTheme.floorBot, theme.floorBot, blend) : theme.floorBot);
+  floorGrad.addColorStop(0, theme.floorTop); floorGrad.addColorStop(1, theme.floorBot);
   ctx.fillStyle = floorGrad;
   ctx.beginPath(); ctx.moveTo(0, h-30);
   for (let i = 0; i <= w; i += 20) { ctx.lineTo(i, h-30 + Math.sin((i + scrollX*0.3)*0.06)*10); }
@@ -296,6 +267,18 @@ function drawAnglerLights(ctx: CanvasRenderingContext2D, lights: AnglerLight[], 
   });
 }
 
+// Draws all floating particles for a given theme (ambient only — no background)
+function drawAmbientForTheme(
+  ctx: CanvasRenderingContext2D, theme: Theme,
+  jellies: Jellyfish[], embers: Ember[], flakes: Snowflake[], lights: AnglerLight[],
+  tick: number
+) {
+  if (theme.ambient === "jellyfish") drawJellyfish(ctx, jellies, tick);
+  if (theme.ambient === "embers") drawEmbers(ctx, embers);
+  if (theme.ambient === "snowflakes") drawSnowflakes(ctx, flakes, tick);
+  if (theme.ambient === "angler") drawAnglerLights(ctx, lights, tick);
+}
+
 // ─────────────────────────────────────────────
 // DRAWING: OBSTACLES
 // ─────────────────────────────────────────────
@@ -305,28 +288,24 @@ function drawPillarDecorations(
   fromTop: boolean, branchColors: [string,string,string], tick: number, themeIdx: number
 ) {
   if (themeIdx === 3) {
-    // Lava cracks
     const glow = 0.5+Math.sin(tick*0.06)*0.5;
     ctx.strokeStyle=`rgba(255,${Math.floor(100+glow*60)},0,0.7)`;ctx.shadowColor="#ff6000";ctx.shadowBlur=8;ctx.lineWidth=2;ctx.lineCap="round";
     for(let c=0;c<3;c++){const cx=x+w*(0.2+c*0.3);ctx.beginPath();ctx.moveTo(cx,y);let cy=y;while(cy<y+h){cy+=15+Math.random()*10;ctx.lineTo(cx+(Math.random()-0.5)*10,Math.min(cy,y+h));}ctx.stroke();
     ctx.fillStyle=`rgba(255,160,0,${glow*0.8})`;ctx.shadowBlur=12;ctx.beginPath();ctx.arc(cx,y+h*0.4+c*20,3,0,Math.PI*2);ctx.fill();}
     ctx.shadowBlur=0;
   } else if (themeIdx === 4) {
-    // Ice shards
     const edgeY=fromTop?y+h:y;const dir=fromTop?1:-1;const numShards=4;
     for(let s=0;s<numShards;s++){const sx=x+(w/numShards)*s+w/(numShards*2);const shardH=(20+s*12)*(s%2===0?1:0.7);
     ctx.fillStyle=branchColors[s%3];ctx.globalAlpha=0.7;ctx.shadowColor="#c0e8ff";ctx.shadowBlur=8;
     ctx.beginPath();ctx.moveTo(sx-8,edgeY);ctx.lineTo(sx,edgeY+dir*shardH);ctx.lineTo(sx+8,edgeY);ctx.closePath();ctx.fill();}
     ctx.globalAlpha=1;ctx.shadowBlur=0;
   } else if (themeIdx === 5) {
-    // Bio veins
     ctx.lineWidth=1.5;ctx.lineCap="round";
     for(let v=0;v<4;v++){const vx=x+w*(0.15+v*0.25);const pulse=0.4+Math.sin(tick*0.07+v*1.3)*0.3;
     ctx.strokeStyle=branchColors[v%3];ctx.shadowColor=branchColors[v%3];ctx.shadowBlur=10;ctx.globalAlpha=pulse;
     ctx.beginPath();ctx.moveTo(vx,y);let cy=y;while(cy<y+h){cy+=18;ctx.lineTo(vx+Math.sin(cy*0.15+tick*0.03)*5,Math.min(cy,y+h));}ctx.stroke();}
     ctx.globalAlpha=1;ctx.shadowBlur=0;
   } else {
-    // Branches (themes 0–2)
     const numBranches = 3;
     const glowing = themeIdx === 2;
     for (let b=0;b<numBranches;b++) {
@@ -344,7 +323,6 @@ function drawPillarDecorations(
       [[bx+sway,by+dir*27],[bx+sway*0.5+Math.sin(-0.6)*15,by+dir*27],[bx+sway*0.5+Math.sin(0.6)*15,by+dir*27]].forEach(([cx,cy])=>{ctx.beginPath();ctx.arc(cx,cy,glowing?5:4,0,Math.PI*2);ctx.fill();});
       ctx.shadowBlur=0;
     }
-    // Seaweed sway (themes 0–1, bottom pillars only)
     if (!fromTop && h > 60 && (themeIdx===0||themeIdx===1)) {
       for (let s=0;s<3;s++) {
         const sx=x+w*0.2+s*(w*0.3); const swayH=30+s*10; const swayAmt=Math.sin(tick*0.04+s*1.5)*6;
@@ -359,47 +337,30 @@ function drawPillarDecorations(
 function drawPillar(
   ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number,
   colors: [string,string,string,string], branchColors: [string,string,string],
-  tick: number, fromTop: boolean, themeIdx: number,
-  prevThemeIdx: number, prevBranchColors: [string,string,string], blend: number
+  tick: number, fromTop: boolean, themeIdx: number
 ) {
   if (h <= 0) return;
   ctx.save();
   const grad = ctx.createLinearGradient(x,y,x+w,y);
   grad.addColorStop(0,colors[0]); grad.addColorStop(0.4,colors[1]); grad.addColorStop(0.7,colors[2]); grad.addColorStop(1,colors[3]);
   ctx.fillStyle = grad; ctx.fillRect(x,y,w,h);
-
   const edgeY = fromTop ? y+h : y; const spikes = 6; const sw = w/spikes;
   ctx.fillStyle = colors[1];
   ctx.beginPath();
   if (fromTop) { ctx.moveTo(x,edgeY); for (let i=0;i<spikes;i++){const sx=x+i*sw;const pk=10+Math.sin(i*1.7+tick*0.01)*5;ctx.lineTo(sx+sw/2,edgeY+pk);ctx.lineTo(sx+sw,edgeY);} }
   else { ctx.moveTo(x,edgeY); for (let i=0;i<spikes;i++){const sx=x+i*sw;const pk=10+Math.sin(i*1.7+tick*0.01)*5;ctx.lineTo(sx+sw/2,edgeY-pk);ctx.lineTo(sx+sw,edgeY);} }
   ctx.lineTo(x+w,edgeY); ctx.closePath(); ctx.fill();
-
-  // Crossfade decorations: previous theme fades out, new theme fades in
-  if (blend < 1) {
-    ctx.save(); ctx.globalAlpha = 1 - blend;
-    drawPillarDecorations(ctx, x, y, w, h, fromTop, prevBranchColors, tick, prevThemeIdx);
-    ctx.restore();
-  }
-  ctx.save(); ctx.globalAlpha = blend;
   drawPillarDecorations(ctx, x, y, w, h, fromTop, branchColors, tick, themeIdx);
-  ctx.restore();
-
   ctx.restore();
 }
 
 function drawObstacle(
-  ctx: CanvasRenderingContext2D, x: number, gapY: number, gap: number, w: number, canvasH: number,
-  theme: Theme, prevTheme: Theme, blend: number, tick: number, themeIdx: number, prevThemeIdx: number
+  ctx: CanvasRenderingContext2D, x: number, gapY: number, gap: number,
+  w: number, canvasH: number, theme: Theme, tick: number, themeIdx: number
 ) {
   const topH = gapY - gap/2; const botY = gapY + gap/2; const botH = canvasH - botY;
-  // Smoothly blend pillar colors between prev and current theme
-  const topColors  = blend < 1 ? blendColors4(prevTheme.topColors, theme.topColors, blend) : theme.topColors;
-  const botColors  = blend < 1 ? blendColors4(prevTheme.botColors, theme.botColors, blend) : theme.botColors;
-  const topBranch  = blend < 1 ? blendColors3(prevTheme.topBranchColors, theme.topBranchColors, blend) : theme.topBranchColors;
-  const botBranch  = blend < 1 ? blendColors3(prevTheme.botBranchColors, theme.botBranchColors, blend) : theme.botBranchColors;
-  drawPillar(ctx,x,0,w,topH,topColors,topBranch,tick,true,themeIdx,prevThemeIdx,prevTheme.topBranchColors,blend);
-  drawPillar(ctx,x,botY,w,botH,botColors,botBranch,tick,false,themeIdx,prevThemeIdx,prevTheme.botBranchColors,blend);
+  drawPillar(ctx,x,0,w,topH,theme.topColors,theme.topBranchColors,tick,true,themeIdx);
+  drawPillar(ctx,x,botY,w,botH,theme.botColors,theme.botBranchColors,tick,false,themeIdx);
 }
 
 // ─────────────────────────────────────────────
@@ -445,7 +406,6 @@ function drawOverlay(ctx: CanvasRenderingContext2D, state: GameState, score: num
     ctx.fillStyle = "rgba(150,210,255,0.7)"; ctx.font = "14px 'Segoe UI', sans-serif"; ctx.fillText("to start swimming!", w/2, h/2+70);
     if (best > 0) { ctx.fillStyle = "#f0c060"; ctx.font = "14px 'Segoe UI', sans-serif"; ctx.fillText(`Best: ${best}`, w/2, h/2+96); }
   }
-
   if (state === "dead") {
     ctx.fillStyle = "rgba(5,10,20,0.82)"; ctx.beginPath(); ctx.roundRect(w/2-160,h/2-152,320,272,24); ctx.fill();
     ctx.fillStyle = "#ff6b5b"; ctx.font = "bold 30px 'Segoe UI', sans-serif"; ctx.textAlign = "center"; ctx.fillText("OH NO!", w/2, h/2-110);
@@ -485,26 +445,32 @@ export default function Game() {
   const floatTextsRef = useRef<FloatText[]>([]);
   const trashCountRef = useRef(0);
 
-  // Theme transition
+  // Theme — current and previous (for wipe transition)
   const themeIdxRef = useRef(0);
   const prevThemeIdxRef = useRef(0);
-  const themeBlendRef = useRef(1);
+  // themeWipeXRef: the x position of the scrolling biome boundary.
+  // null = no transition, number = vertical dividing line moving leftward.
+  const themeWipeXRef = useRef<number | null>(null);
   const themeNameRef = useRef<string|null>(null);
   const themeNameAlphaRef = useRef(0);
 
   // Difficulty / milestone
   const difficultyStepRef = useRef(0);
-  const nextMilestoneRef = useRef(MILESTONE_PATTERN[0]); // first at 15
-  const milestoneAltIdxRef = useRef(1);                  // next will be MILESTONE_PATTERN[1] = 20
+  const nextMilestoneRef = useRef(MILESTONE_PATTERN[0]);
+  const milestoneAltIdxRef = useRef(1);
   const currentSpeedRef = useRef(DIFFICULTY_STEPS[0].speed);
   const currentGapRef = useRef(DIFFICULTY_STEPS[0].gap);
   const currentIntervalRef = useRef(DIFFICULTY_STEPS[0].interval);
 
-  // Ambient particles
+  // Ambient particles — two sets so both sides can display during wipe
   const jelliesRef = useRef<Jellyfish[]>([]);
   const embersRef = useRef<Ember[]>([]);
   const flakesRef = useRef<Snowflake[]>([]);
   const anglerLightsRef = useRef<AnglerLight[]>([]);
+  const prevJelliesRef = useRef<Jellyfish[]>([]);
+  const prevEmbersRef = useRef<Ember[]>([]);
+  const prevFlakesRef = useRef<Snowflake[]>([]);
+  const prevAnglerLightsRef = useRef<AnglerLight[]>([]);
 
   const [uiState, setUiState] = useState<GameState>("idle");
   const [showDonate, setShowDonate] = useState(false);
@@ -525,8 +491,19 @@ export default function Game() {
     bubblesRef.current = bs;
   }, []);
 
-  const initAmbientForTheme = useCallback((idx: number) => {
+  const initAmbientForTheme = useCallback((idx: number, saveOld = false) => {
+    // Optionally copy current ambient into "prev" arrays before replacing
+    if (saveOld) {
+      prevJelliesRef.current = jelliesRef.current;
+      prevEmbersRef.current = embersRef.current;
+      prevFlakesRef.current = flakesRef.current;
+      prevAnglerLightsRef.current = anglerLightsRef.current;
+    }
     const theme = THEMES[idx];
+    jelliesRef.current = [];
+    embersRef.current = [];
+    flakesRef.current = [];
+    anglerLightsRef.current = [];
     if (theme.ambient==="jellyfish") jelliesRef.current = Array.from({length:theme.ambientCount},()=>({x:Math.random()*CANVAS_WIDTH,y:Math.random()*(CANVAS_HEIGHT*0.8),phase:Math.random()*Math.PI*2,r:10+Math.random()*18,color:["#b060ff","#4080ff","#ff60c0","#60d0ff"][Math.floor(Math.random()*4)],speed:0.2+Math.random()*0.3}));
     if (theme.ambient==="embers") embersRef.current = Array.from({length:theme.ambientCount},()=>({x:Math.random()*CANVAS_WIDTH,y:CANVAS_HEIGHT*0.3+Math.random()*CANVAS_HEIGHT*0.6,vx:(Math.random()-0.5)*0.8,vy:-(0.4+Math.random()*0.8),alpha:0.4+Math.random()*0.6,size:1.5+Math.random()*2.5}));
     if (theme.ambient==="snowflakes") flakesRef.current = Array.from({length:theme.ambientCount},()=>({x:Math.random()*CANVAS_WIDTH,y:Math.random()*CANVAS_HEIGHT,speed:0.3+Math.random()*0.5,r:4+Math.random()*6,phase:Math.random()*Math.PI*2}));
@@ -547,10 +524,8 @@ export default function Game() {
     tickRef.current = 0; scrollXRef.current = 0;
     lastObstacleTimeRef.current = 0; lastTrashTimeRef.current = 0;
     trashItemsRef.current = []; floatTextsRef.current = []; trashCountRef.current = 0;
-    // Reset theme
     themeIdxRef.current = 0; prevThemeIdxRef.current = 0;
-    themeBlendRef.current = 1; themeNameRef.current = null; themeNameAlphaRef.current = 0;
-    // Reset difficulty
+    themeWipeXRef.current = null; themeNameRef.current = null; themeNameAlphaRef.current = 0;
     difficultyStepRef.current = 0;
     nextMilestoneRef.current = MILESTONE_PATTERN[0];
     milestoneAltIdxRef.current = 1;
@@ -558,6 +533,7 @@ export default function Game() {
     currentSpeedRef.current = d0.speed;
     currentGapRef.current = d0.gap;
     currentIntervalRef.current = d0.interval;
+    prevJelliesRef.current = []; prevEmbersRef.current = []; prevFlakesRef.current = []; prevAnglerLightsRef.current = [];
     initAmbientForTheme(0);
     stateRef.current = "playing";
     setUiState("playing");
@@ -587,14 +563,23 @@ export default function Game() {
 
       bubblesRef.current.forEach((b)=>{b.y-=b.speed;if(b.y+b.r<0){b.y=CANVAS_HEIGHT+b.r;b.x=Math.random()*CANVAS_WIDTH;}});
 
-      const curThemeIdx = themeIdxRef.current;
-      const curTheme = THEMES[curThemeIdx];
+      const curTheme = THEMES[themeIdxRef.current];
       if (curTheme.ambient==="jellyfish") jelliesRef.current.forEach((j)=>{j.y-=j.speed;if(j.y+j.r*2<0){j.y=CANVAS_HEIGHT+j.r;j.x=Math.random()*CANVAS_WIDTH;}});
       if (curTheme.ambient==="embers") embersRef.current.forEach((e)=>{e.x+=e.vx+Math.sin(tick*0.05)*0.3;e.y+=e.vy;e.alpha-=0.003;if(e.alpha<=0||e.y<0){e.x=Math.random()*CANVAS_WIDTH;e.y=CANVAS_HEIGHT*0.7+Math.random()*CANVAS_HEIGHT*0.3;e.alpha=0.5+Math.random()*0.5;}});
       if (curTheme.ambient==="snowflakes") flakesRef.current.forEach((f)=>{f.y+=f.speed;f.x+=Math.sin(tick*0.02+f.phase)*0.5;if(f.y>CANVAS_HEIGHT+f.r){f.y=-f.r;f.x=Math.random()*CANVAS_WIDTH;}});
 
       if (state === "playing") {
         const spd = currentSpeedRef.current;
+
+        // Advance the biome wipe boundary at game speed
+        if (themeWipeXRef.current !== null) {
+          themeWipeXRef.current -= spd;
+          if (themeWipeXRef.current <= 0) {
+            themeWipeXRef.current = null;
+            prevJelliesRef.current = []; prevEmbersRef.current = []; prevFlakesRef.current = []; prevAnglerLightsRef.current = [];
+          }
+        }
+
         scrollXRef.current += spd;
         turtle.vy += GRAVITY; turtle.y += turtle.vy;
         turtle.angle = Math.max(-0.5, Math.min(0.9, turtle.vy*0.07));
@@ -606,21 +591,17 @@ export default function Game() {
           setUiState("dead");
         }
 
-        // Spawn obstacles (use current difficulty interval)
         if (timestamp - lastObstacleTimeRef.current > currentIntervalRef.current) {
           const gap = currentGapRef.current;
           const minGapY = gap/2 + 60; const maxGapY = CANVAS_HEIGHT - gap/2 - 60;
           obstaclesRef.current.push({
             x: CANVAS_WIDTH + OBSTACLE_WIDTH,
             gapY: minGapY + Math.random() * (maxGapY - minGapY),
-            gap,
-            speed: spd,
-            scored: false,
+            gap, speed: spd, scored: false,
           });
           lastObstacleTimeRef.current = timestamp;
         }
 
-        // Spawn trash
         if (timestamp - lastTrashTimeRef.current > TRASH_INTERVAL + Math.random()*1000) {
           const types: TrashType[] = ["bottle","bag","can","straw"];
           const type = types[Math.floor(Math.random()*types.length)];
@@ -629,14 +610,12 @@ export default function Game() {
           lastTrashTimeRef.current = timestamp;
         }
 
-        // Move obstacles + score + milestone check
         obstaclesRef.current = obstaclesRef.current.filter((obs)=>{
-          obs.x -= obs.speed; // use per-obstacle baked speed
+          obs.x -= obs.speed;
           if (!obs.scored && obs.x + OBSTACLE_WIDTH < TURTLE_X) {
             obs.scored = true;
             scoreRef.current++;
 
-            // Milestone: did we hit the next difficulty/theme boundary?
             if (scoreRef.current >= nextMilestoneRef.current) {
               difficultyStepRef.current++;
               const step = DIFFICULTY_STEPS[Math.min(difficultyStepRef.current, DIFFICULTY_STEPS.length - 1)];
@@ -644,20 +623,20 @@ export default function Game() {
               currentGapRef.current   = step.gap;
               currentIntervalRef.current = step.interval;
 
-              // Advance next milestone (alternating 15 / 20)
               const nextSize = MILESTONE_PATTERN[milestoneAltIdxRef.current];
               nextMilestoneRef.current += nextSize;
               milestoneAltIdxRef.current = (milestoneAltIdxRef.current + 1) % MILESTONE_PATTERN.length;
 
-              // Theme change (one per difficulty step, capped at last theme)
               const newThemeIdx = Math.min(difficultyStepRef.current, THEMES.length - 1);
               if (newThemeIdx !== themeIdxRef.current) {
                 prevThemeIdxRef.current = themeIdxRef.current;
                 themeIdxRef.current = newThemeIdx;
-                themeBlendRef.current = 0;
+                // Start the side-scroll wipe from the right edge
+                themeWipeXRef.current = CANVAS_WIDTH;
                 themeNameRef.current = THEMES[newThemeIdx].name;
                 themeNameAlphaRef.current = 1;
-                initAmbientForTheme(newThemeIdx);
+                // Initialize new ambient; save old ambient into prev arrays for left-side rendering
+                initAmbientForTheme(newThemeIdx, true);
               }
             }
           }
@@ -675,7 +654,6 @@ export default function Game() {
           return obs.x + OBSTACLE_WIDTH > -10;
         });
 
-        // Move trash + collect
         trashItemsRef.current = trashItemsRef.current.filter((t)=>{
           t.x -= TRASH_SPEED;
           const dx = TURTLE_X - t.x; const dy = turtle.y - (t.y + Math.sin(tick*0.025+t.phase)*8);
@@ -688,38 +666,69 @@ export default function Game() {
           return t.x > -40;
         });
 
-        // Theme blend advances slowly — gives a gradual parallax-style transition
-        if (themeBlendRef.current < 1) themeBlendRef.current = Math.min(1, themeBlendRef.current + 0.003);
         if (themeNameAlphaRef.current > 0) themeNameAlphaRef.current = Math.max(0, themeNameAlphaRef.current - 0.007);
       }
 
       if (deathCooldownRef.current > 0) deathCooldownRef.current--;
-
       particlesRef.current = particlesRef.current.filter((p)=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.alpha-=0.025;return p.alpha>0;});
       floatTextsRef.current = floatTextsRef.current.filter((f)=>{f.y+=f.vy;f.alpha-=0.018;return f.alpha>0;});
 
       // ─── DRAW ───
       ctx.clearRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
-      const tIdx = themeIdxRef.current; const pIdx = prevThemeIdxRef.current; const blend = themeBlendRef.current;
-      const theme = THEMES[tIdx]; const prevTheme = THEMES[pIdx];
 
-      drawBackground(ctx,CANVAS_WIDTH,CANVAS_HEIGHT,scrollXRef.current,bubblesRef.current,theme,prevTheme,blend,tick);
+      const tIdx = themeIdxRef.current;
+      const pIdx = prevThemeIdxRef.current;
+      const theme = THEMES[tIdx];
+      const prevTheme = THEMES[pIdx];
+      const wipeX = themeWipeXRef.current;
 
-      // Ambient effects — new theme fades in, old fades out during blend
-      if (prevTheme.ambient==="jellyfish"&&blend<1){ctx.save();ctx.globalAlpha=1-blend;drawJellyfish(ctx,jelliesRef.current,tick);ctx.restore();}
-      if (prevTheme.ambient==="embers"&&blend<1){ctx.save();ctx.globalAlpha=1-blend;drawEmbers(ctx,embersRef.current);ctx.restore();}
-      if (prevTheme.ambient==="snowflakes"&&blend<1){ctx.save();ctx.globalAlpha=1-blend;drawSnowflakes(ctx,flakesRef.current,tick);ctx.restore();}
-      if (prevTheme.ambient==="angler"&&blend<1){ctx.save();ctx.globalAlpha=1-blend;drawAnglerLights(ctx,anglerLightsRef.current,tick);ctx.restore();}
-      if (theme.ambient==="jellyfish"){ctx.save();ctx.globalAlpha=blend;drawJellyfish(ctx,jelliesRef.current,tick);ctx.restore();}
-      if (theme.ambient==="embers"){ctx.save();ctx.globalAlpha=blend;drawEmbers(ctx,embersRef.current);ctx.restore();}
-      if (theme.ambient==="snowflakes"){ctx.save();ctx.globalAlpha=blend;drawSnowflakes(ctx,flakesRef.current,tick);ctx.restore();}
-      if (theme.ambient==="angler"){ctx.save();ctx.globalAlpha=blend;drawAnglerLights(ctx,anglerLightsRef.current,tick);ctx.restore();}
+      if (wipeX !== null && wipeX > 0) {
+        // LEFT side: old biome
+        ctx.save();
+        ctx.beginPath(); ctx.rect(0, 0, wipeX, CANVAS_HEIGHT); ctx.clip();
+        drawBackground(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, scrollXRef.current, bubblesRef.current, prevTheme, tick);
+        drawAmbientForTheme(ctx, prevTheme, prevJelliesRef.current, prevEmbersRef.current, prevFlakesRef.current, prevAnglerLightsRef.current, tick);
+        ctx.restore();
 
-      trashItemsRef.current.forEach((t)=>drawTrashItem(ctx,t,tick));
+        // RIGHT side: new biome
+        ctx.save();
+        ctx.beginPath(); ctx.rect(wipeX, 0, CANVAS_WIDTH - wipeX, CANVAS_HEIGHT); ctx.clip();
+        drawBackground(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, scrollXRef.current, bubblesRef.current, theme, tick);
+        drawAmbientForTheme(ctx, theme, jelliesRef.current, embersRef.current, flakesRef.current, anglerLightsRef.current, tick);
+        ctx.restore();
 
-      obstaclesRef.current.forEach((obs)=>
-        drawObstacle(ctx,obs.x,obs.gapY,obs.gap,OBSTACLE_WIDTH,CANVAS_HEIGHT,theme,prevTheme,blend,tick,tIdx,pIdx)
-      );
+        // Wipe edge — a thin bright shimmer line at the boundary
+        ctx.save();
+        const shimmer = ctx.createLinearGradient(wipeX - 8, 0, wipeX + 8, 0);
+        shimmer.addColorStop(0, "rgba(255,255,255,0)");
+        shimmer.addColorStop(0.5, "rgba(255,255,255,0.45)");
+        shimmer.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = shimmer;
+        ctx.fillRect(wipeX - 8, 0, 16, CANVAS_HEIGHT);
+        ctx.restore();
+      } else {
+        drawBackground(ctx, CANVAS_WIDTH, CANVAS_HEIGHT, scrollXRef.current, bubblesRef.current, theme, tick);
+        drawAmbientForTheme(ctx, theme, jelliesRef.current, embersRef.current, flakesRef.current, anglerLightsRef.current, tick);
+      }
+
+      trashItemsRef.current.forEach((t) => drawTrashItem(ctx, t, tick));
+
+      // Obstacles: split by wipe line so each side renders with its own theme
+      obstaclesRef.current.forEach((obs) => {
+        if (wipeX !== null && obs.x < wipeX && obs.x + OBSTACLE_WIDTH > wipeX) {
+          // Straddles the boundary — draw each side with correct theme using clipping
+          ctx.save(); ctx.beginPath(); ctx.rect(0, 0, wipeX, CANVAS_HEIGHT); ctx.clip();
+          drawObstacle(ctx, obs.x, obs.gapY, obs.gap, OBSTACLE_WIDTH, CANVAS_HEIGHT, prevTheme, tick, pIdx);
+          ctx.restore();
+          ctx.save(); ctx.beginPath(); ctx.rect(wipeX, 0, CANVAS_WIDTH - wipeX, CANVAS_HEIGHT); ctx.clip();
+          drawObstacle(ctx, obs.x, obs.gapY, obs.gap, OBSTACLE_WIDTH, CANVAS_HEIGHT, theme, tick, tIdx);
+          ctx.restore();
+        } else {
+          const inOldZone = wipeX !== null && obs.x + OBSTACLE_WIDTH <= wipeX;
+          drawObstacle(ctx, obs.x, obs.gapY, obs.gap, OBSTACLE_WIDTH, CANVAS_HEIGHT,
+            inOldZone ? prevTheme : theme, tick, inOldZone ? pIdx : tIdx);
+        }
+      });
 
       const showTurtle = state!=="dead"||Math.floor(tick/5)%2===0;
       if (showTurtle) drawTurtle(ctx,TURTLE_X,turtle.y,turtle.angle,TURTLE_SIZE,tIdx);
@@ -732,7 +741,6 @@ export default function Game() {
       ctx.globalAlpha=1;
 
       drawFloatTexts(ctx, floatTextsRef.current);
-
       if (state==="playing"||state==="dead") drawUI(ctx,scoreRef.current,trashCountRef.current,CANVAS_WIDTH,theme,tIdx,themeNameRef.current,themeNameAlphaRef.current);
       drawOverlay(ctx,state,scoreRef.current,bestRef.current,trashCountRef.current,CANVAS_WIDTH,CANVAS_HEIGHT,theme);
 
@@ -771,19 +779,13 @@ export default function Game() {
             style={{
               position:"absolute",
               bottom: uiState === "idle" ? 148 : 138,
-              left:"50%",
-              transform:"translateX(-50%)",
+              left:"50%", transform:"translateX(-50%)",
               background:"linear-gradient(135deg,#1a6040,#0d3a22)",
               border:"1.5px solid rgba(77,196,122,0.5)",
-              borderRadius:20,
-              color:"rgba(150,255,180,0.95)",
-              padding:"8px 20px",
-              fontSize:13,
-              fontWeight:600,
-              fontFamily:"'Segoe UI',sans-serif",
-              cursor:"pointer",
-              whiteSpace:"nowrap",
-              letterSpacing:"0.01em",
+              borderRadius:20, color:"rgba(150,255,180,0.95)",
+              padding:"8px 20px", fontSize:13, fontWeight:600,
+              fontFamily:"'Segoe UI',sans-serif", cursor:"pointer",
+              whiteSpace:"nowrap", letterSpacing:"0.01em",
               boxShadow:"0 0 16px rgba(77,196,122,0.2)",
             }}
           >
@@ -792,17 +794,14 @@ export default function Game() {
         )}
 
         {donateResult && (
-          <div
-            className="no-jump"
-            style={{
-              position:"absolute", top:20, left:"50%", transform:"translateX(-50%)",
-              background: donateResult==="success" ? "rgba(20,80,40,0.95)" : "rgba(60,20,20,0.9)",
-              border:`1.5px solid ${donateResult==="success"?"rgba(77,196,122,0.6)":"rgba(255,100,100,0.4)"}`,
-              borderRadius:12, color:"white", padding:"10px 20px", fontSize:13,
-              fontFamily:"'Segoe UI',sans-serif", textAlign:"center",
-              display:"flex", alignItems:"center", gap:8, whiteSpace:"nowrap",
-            }}
-          >
+          <div className="no-jump" style={{
+            position:"absolute", top:20, left:"50%", transform:"translateX(-50%)",
+            background: donateResult==="success" ? "rgba(20,80,40,0.95)" : "rgba(60,20,20,0.9)",
+            border:`1.5px solid ${donateResult==="success"?"rgba(77,196,122,0.6)":"rgba(255,100,100,0.4)"}`,
+            borderRadius:12, color:"white", padding:"10px 20px", fontSize:13,
+            fontFamily:"'Segoe UI',sans-serif", textAlign:"center",
+            display:"flex", alignItems:"center", gap:8, whiteSpace:"nowrap",
+          }}>
             {donateResult==="success" ? "🐢 Thank you! Your donation is making a difference!" : "Donation cancelled — you can try again anytime."}
             <button onPointerDown={(e)=>{e.stopPropagation();setDonateResult(null);}} style={{background:"none",border:"none",color:"rgba(255,255,255,0.5)",cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}>×</button>
           </div>
