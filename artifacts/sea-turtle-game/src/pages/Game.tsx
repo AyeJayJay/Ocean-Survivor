@@ -4,6 +4,7 @@ import BannerAd from "../ads/BannerAd";
 import InterstitialAd from "../ads/InterstitialAd";
 import RewardedAd from "../ads/RewardedAd";
 import { adFrequencyManager } from "../ads/AdFrequencyManager";
+import { analytics } from "../analytics/Analytics";
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 640;
@@ -537,6 +538,7 @@ export default function Game() {
   }, []);
 
   const resetGame = useCallback(() => {
+    analytics.track("game_start");
     turtleRef.current = {y:CANVAS_HEIGHT/2,vy:0,angle:0};
     obstaclesRef.current = []; scoreRef.current = 0; particlesRef.current = [];
     tickRef.current = 0; scrollXRef.current = 0;
@@ -559,9 +561,14 @@ export default function Game() {
     const decision = adFrequencyManager.canShowInterstitial();
     if (decision.allowed) {
       adFrequencyManager.recordInterstitial();
+      analytics.track("interstitial_impression", { trigger: "restart" });
       setShowInterstitial(true);
       return true;
     }
+    analytics.track("interstitial_suppressed", {
+      reason: decision.reason,
+      session_interstitial_count: adFrequencyManager.interstitialCount,
+    });
     return false;
   }, []);
 
@@ -594,11 +601,13 @@ export default function Game() {
     deathCooldownRef.current = 0;
     stateRef.current = "playing";
     adFrequencyManager.recordRewardedAd(); // suppress interstitials for 3 min after reward
+    analytics.track("game_revived", { score: scoreRef.current });
     setReviveUsed(true);
     setUiState("playing");
   }, []);
 
   useEffect(() => {
+    analytics.track("session_start", { is_new_user: adFrequencyManager.newUser, session_number: adFrequencyManager.sessionNumber });
     initBubbles(); initAmbientForTheme(0);
     const handleKey = (e: KeyboardEvent) => { if (e.code==="Space"||e.code==="ArrowUp"){e.preventDefault();jump();} };
     window.addEventListener("keydown", handleKey);
@@ -638,6 +647,7 @@ export default function Game() {
           revivePosRef.current = turtle.y;
           spawnParticles(TURTLE_X, turtle.y); stateRef.current="dead"; deathCooldownRef.current=60;
           if (scoreRef.current>bestRef.current) bestRef.current=scoreRef.current;
+          analytics.track("game_over", { score: scoreRef.current, death_cause: "floor", theme_index: themeIdxRef.current });
           setUiState("dead");
         }
 
@@ -695,6 +705,7 @@ export default function Game() {
               revivePosRef.current = turtle.y;
               spawnParticles(TURTLE_X, turtle.y); stateRef.current="dead"; deathCooldownRef.current=60;
               if (scoreRef.current>bestRef.current) bestRef.current=scoreRef.current;
+              analytics.track("game_over", { score: scoreRef.current, death_cause: "obstacle", theme_index: themeIdxRef.current });
               setUiState("dead");
             }
           }
@@ -871,7 +882,7 @@ export default function Game() {
         {uiState === "dead" && !reviveUsed && !showDonate && !showInterstitial && !showRewarded && (
           <button
             className="no-jump"
-            onPointerDown={(e) => { e.stopPropagation(); setShowRewarded(true); }}
+            onPointerDown={(e) => { e.stopPropagation(); analytics.track("rewarded_preroll_shown"); setShowRewarded(true); }}
             style={{
               position:"absolute",
               bottom: 92,
@@ -906,9 +917,10 @@ export default function Game() {
 
         {showDonate && <DonateModal onClose={() => setShowDonate(false)} />}
 
-        {/* Interstitial — shown at restart transition, max once per 2.5 min */}
+        {/* Interstitial — shown at restart transition, gated by frequency manager */}
         {showInterstitial && (
           <InterstitialAd onClose={() => {
+            analytics.track("interstitial_dismissed");
             setShowInterstitial(false);
             if (pendingRestartRef.current) {
               pendingRestartRef.current = false;
@@ -922,7 +934,10 @@ export default function Game() {
           <RewardedAd
             onComplete={(rewarded) => {
               setShowRewarded(false);
-              if (rewarded) revive();
+              if (rewarded) {
+                analytics.track("rewarded_completed");
+                revive();
+              }
             }}
           />
         )}

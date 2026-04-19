@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { analytics } from "../analytics/Analytics";
 
 /*
  * RewardedAd — rewarded video ad; grants a revive on full completion
@@ -156,7 +157,7 @@ export default function RewardedAd({ onComplete }: Props) {
           </div>
 
           <button
-            onClick={() => setPhase("watching")}
+            onClick={() => { analytics.track("rewarded_started"); setPhase("watching"); }}
             style={{
               background: "linear-gradient(135deg,#1e7aff,#0d4aaa)",
               border: "none", borderRadius: 24,
@@ -172,7 +173,7 @@ export default function RewardedAd({ onComplete }: Props) {
           </button>
 
           <button
-            onClick={() => onComplete(false)}
+            onClick={() => { analytics.track("rewarded_declined"); onComplete(false); }}
             style={{
               background: "none", border: "none",
               color: "rgba(255,255,255,0.3)", fontSize: 12,
@@ -201,7 +202,7 @@ export default function RewardedAd({ onComplete }: Props) {
           }}>
             {canSkip ? (
               <button
-                onClick={() => onComplete(false)}
+                onClick={() => { analytics.track("rewarded_skipped", { elapsed_s: elapsed }); onComplete(false); }}
                 style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 20, color: "rgba(255,255,255,0.7)", padding: "3px 10px", fontSize: 11, fontFamily: "'Segoe UI', sans-serif", cursor: "pointer" }}
               >Skip (no reward)</button>
             ) : (

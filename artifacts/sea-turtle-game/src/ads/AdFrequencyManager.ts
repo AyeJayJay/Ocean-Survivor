@@ -1,38 +1,25 @@
 /*
  * AdFrequencyManager — centralized ad exposure tracking for Sea Turtle Dash
  *
- * Rules enforced:
- *  - New users (first 3 sessions): max 1 interstitial per session, 5-min cooldown
- *  - Regular users: max 3 interstitials per session, 2.5-min cooldown
- *  - After a rewarded ad is fully watched: 3-min grace period before any interstitial
- *  - Rewarded ads are never frequency-capped (player opts in voluntarily)
+ * Frequency config is driven by the user's assigned A/B variant so that
+ * each cohort experiences different ad cadences. All results are logged
+ * to the analytics module for downstream analysis.
  *
- * Persistence: session count stored in localStorage so "new user" rules apply
- * correctly across visits. All other state is in-memory per session.
+ * Rules enforced (per variant — see ABTest.ts for exact values):
+ *  - New users (first N sessions): lower cap, longer cooldown
+ *  - Regular users: higher cap, standard cooldown
+ *  - After a rewarded ad is fully watched: grace period before any interstitial
+ *  - Rewarded ads are never frequency-capped (player opts in voluntarily)
  */
 
+import { getVariant } from "../analytics/ABTest";
+import type { FrequencyConfig } from "../analytics/types";
+
 const LS_TOTAL_SESSIONS = "stg_total_sessions";
-const NEW_USER_SESSION_THRESHOLD = 3; // sessions 1–3 are "new user"
-
-interface FrequencyConfig {
-  interstitialCooldownMs: number;
-  newUserInterstitialCooldownMs: number;
-  maxInterstitialsPerSession: number;
-  newUserMaxInterstitialsPerSession: number;
-  rewardedGracePeriodMs: number;
-}
-
-const DEFAULT_CONFIG: FrequencyConfig = {
-  interstitialCooldownMs:        150_000, // 2.5 min  — returning users
-  newUserInterstitialCooldownMs: 300_000, // 5 min    — new users
-  maxInterstitialsPerSession:    3,       //           — returning users
-  newUserMaxInterstitialsPerSession: 1,   //           — new users (1 max)
-  rewardedGracePeriodMs:         180_000, // 3 min after watching a rewarded ad
-};
 
 export interface AdDecision {
   allowed: boolean;
-  reason?: string; // debug info, never shown to users
+  reason?: string; // debug only, never shown to users
 }
 
 class AdFrequencyManager {
@@ -45,14 +32,14 @@ class AdFrequencyManager {
   private lastInterstitialTime = 0;
   private lastRewardedTime = 0;
 
-  constructor(config: FrequencyConfig = DEFAULT_CONFIG) {
-    this.config = config;
+  constructor() {
+    this.config = getVariant().adConfig;
 
     const stored = parseInt(localStorage.getItem(LS_TOTAL_SESSIONS) ?? "0", 10);
     this.totalSessions = stored + 1;
     localStorage.setItem(LS_TOTAL_SESSIONS, String(this.totalSessions));
 
-    this.isNewUser = this.totalSessions <= NEW_USER_SESSION_THRESHOLD;
+    this.isNewUser = this.totalSessions <= this.config.newUserSessionThreshold;
   }
 
   // ── Public API ────────────────────────────────────────────────────────────
@@ -102,21 +89,11 @@ class AdFrequencyManager {
 
   // ── Read-only state ───────────────────────────────────────────────────────
 
-  get sessionAgeMs(): number {
-    return Date.now() - this.sessionStart;
-  }
-
-  get isFirstSession(): boolean {
-    return this.totalSessions === 1;
-  }
-
-  get sessionNumber(): number {
-    return this.totalSessions;
-  }
-
-  get interstitialCount(): number {
-    return this.interstitialsThisSession;
-  }
+  get sessionAgeMs(): number { return Date.now() - this.sessionStart; }
+  get isFirstSession(): boolean { return this.totalSessions === 1; }
+  get sessionNumber(): number { return this.totalSessions; }
+  get interstitialCount(): number { return this.interstitialsThisSession; }
+  get newUser(): boolean { return this.isNewUser; }
 }
 
 // Singleton — one instance for the lifetime of the page
