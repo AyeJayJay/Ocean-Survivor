@@ -10,6 +10,9 @@ import { soundManager } from "../audio/SoundManager";
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 640;
+// Set to true once an LLC is established and Stripe donations are ready for players
+const DONATIONS_ENABLED: boolean = false;
+
 const TURTLE_X = 80;
 const TURTLE_SIZE = 46;
 const GRAVITY = 0.45;
@@ -914,7 +917,7 @@ export default function Game() {
           offset={4}
         />
 
-        {uiState !== "playing" && !showDonate && !showInterstitial && !showRewarded
+        {DONATIONS_ENABLED && uiState !== "playing" && !showDonate && !showInterstitial && !showRewarded
           && (uiState !== "dead" || deathButtonsReady) && (
           <button
             className="no-jump"
@@ -959,7 +962,7 @@ export default function Game() {
         )}
 
 
-        {donateResult && (
+        {DONATIONS_ENABLED && donateResult && (
           <div className="no-jump" style={{
             position:"absolute", top:20, left:"50%", transform:"translateX(-50%)",
             background: donateResult==="success" ? "rgba(20,80,40,0.95)" : "rgba(60,20,20,0.9)",
@@ -973,7 +976,7 @@ export default function Game() {
           </div>
         )}
 
-        {showDonate && <DonateModal onClose={() => setShowDonate(false)} />}
+        {DONATIONS_ENABLED && showDonate && <DonateModal onClose={() => setShowDonate(false)} />}
 
         {/* Interstitial — shown at restart transition, gated by frequency manager */}
         {showInterstitial && (
