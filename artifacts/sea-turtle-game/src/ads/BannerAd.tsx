@@ -33,6 +33,9 @@ interface Props {
   position?: "top" | "bottom";
   offset?: number;
   compact?: boolean;
+  /** When false the banner is visible for impressions but never tappable.
+   *  Use during active gameplay to prevent accidental clicks. */
+  interactive?: boolean;
 }
 
 export default function BannerAd({
@@ -40,6 +43,7 @@ export default function BannerAd({
   position = "bottom",
   offset = 4,
   compact = false,
+  interactive = true,
 }: Props) {
   const [status, setStatus] = useState<Status>("loading");
   const [ad, setAd] = useState(MOCK_ADS[0]);
@@ -99,7 +103,7 @@ export default function BannerAd({
         overflow: "hidden",
         border: "1px solid rgba(255,255,255,0.1)",
         boxShadow: "0 2px 10px rgba(0,0,0,0.5)",
-        pointerEvents: shown ? "auto" : "none",
+        pointerEvents: shown && interactive ? "auto" : "none",
         opacity: shown ? (compact ? 0.88 : 1) : 0,
         transition: "opacity 0.5s ease",
         ...posStyle,

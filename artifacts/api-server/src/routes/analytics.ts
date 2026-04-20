@@ -9,6 +9,7 @@ const router = Router();
 const VALID_EVENT_TYPES = new Set([
   "session_start", "game_start", "game_over", "game_revived", "theme_reached",
   "interstitial_impression", "interstitial_dismissed", "interstitial_suppressed",
+  "interstitial_cta_click",
   "rewarded_preroll_shown", "rewarded_declined", "rewarded_started",
   "rewarded_skipped", "rewarded_completed", "banner_impression",
 ]);

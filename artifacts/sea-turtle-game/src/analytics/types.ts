@@ -26,4 +26,5 @@ export type AnalyticsEventType =
   | "rewarded_started"
   | "rewarded_skipped"
   | "rewarded_completed"
-  | "banner_impression";
+  | "banner_impression"
+  | "interstitial_cta_click";

@@ -5,6 +5,7 @@ import InterstitialAd from "../ads/InterstitialAd";
 import RewardedAd from "../ads/RewardedAd";
 import { adFrequencyManager } from "../ads/AdFrequencyManager";
 import { analytics } from "../analytics/Analytics";
+import { AdErrorBoundary } from "../ads/AdErrorBoundary";
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 640;
@@ -475,6 +476,8 @@ export default function Game() {
   const [reviveUsed, setReviveUsed] = useState(false);
   const nearObstacleRef = useRef(false);
   const [gameplayBannerVisible, setGameplayBannerVisible] = useState(true);
+  // Delay death-screen action buttons to prevent accidental taps on rapid death
+  const [deathButtonsReady, setDeathButtonsReady] = useState(false);
 
   // Theme milestone tracking (no difficulty ramp)
   const themeStepRef = useRef(0);
@@ -604,6 +607,24 @@ export default function Game() {
     analytics.track("game_revived", { score: scoreRef.current });
     setReviveUsed(true);
     setUiState("playing");
+  }, []);
+
+  // Reveal death-screen buttons after a short delay to prevent accidental taps
+  // from a rapid-tapping player whose finger is still in motion when they die.
+  useEffect(() => {
+    if (uiState !== "dead") { setDeathButtonsReady(false); return; }
+    const t = setTimeout(() => setDeathButtonsReady(true), 750);
+    return () => clearTimeout(t);
+  }, [uiState]);
+
+  // Stable error-recovery callbacks for the ad error boundaries
+  const onInterstitialError = useCallback(() => {
+    setShowInterstitial(false);
+    if (pendingRestartRef.current) { pendingRestartRef.current = false; resetGame(); }
+  }, [resetGame]);
+
+  const onRewardedError = useCallback(() => {
+    setShowRewarded(false);
   }, []);
 
   useEffect(() => {
@@ -842,12 +863,15 @@ export default function Game() {
           onPointerDown={handleTap}
         />
 
-        {/* Gameplay banner — compact strip at top, auto-hides near obstacles */}
+        {/* Gameplay banner — compact strip at top, auto-hides near obstacles.
+            interactive=false: impression-only during play; taps never register
+            so the player can never accidentally click it mid-game. */}
         <BannerAd
           visible={uiState === "playing" && gameplayBannerVisible && !showInterstitial && !showRewarded}
           position="top"
           offset={4}
           compact
+          interactive={false}
         />
 
         {/* Menu banner — full-size strip at bottom on idle/dead screens */}
@@ -857,7 +881,8 @@ export default function Game() {
           offset={4}
         />
 
-        {uiState !== "playing" && !showDonate && !showInterstitial && !showRewarded && (
+        {uiState !== "playing" && !showDonate && !showInterstitial && !showRewarded
+          && (uiState !== "dead" || deathButtonsReady) && (
           <button
             className="no-jump"
             onPointerDown={(e) => { e.stopPropagation(); setShowDonate(true); }}
@@ -878,8 +903,8 @@ export default function Game() {
           </button>
         )}
 
-        {/* Rewarded ad offer — shown once per run on death */}
-        {uiState === "dead" && !reviveUsed && !showDonate && !showInterstitial && !showRewarded && (
+        {/* Rewarded ad offer — shown once per run on death, after 750ms grace */}
+        {uiState === "dead" && deathButtonsReady && !reviveUsed && !showDonate && !showInterstitial && !showRewarded && (
           <button
             className="no-jump"
             onPointerDown={(e) => { e.stopPropagation(); analytics.track("rewarded_preroll_shown"); setShowRewarded(true); }}
@@ -919,27 +944,31 @@ export default function Game() {
 
         {/* Interstitial — shown at restart transition, gated by frequency manager */}
         {showInterstitial && (
-          <InterstitialAd onClose={() => {
-            analytics.track("interstitial_dismissed");
-            setShowInterstitial(false);
-            if (pendingRestartRef.current) {
-              pendingRestartRef.current = false;
-              resetGame();
-            }
-          }} />
+          <AdErrorBoundary onError={onInterstitialError}>
+            <InterstitialAd onClose={() => {
+              analytics.track("interstitial_dismissed");
+              setShowInterstitial(false);
+              if (pendingRestartRef.current) {
+                pendingRestartRef.current = false;
+                resetGame();
+              }
+            }} />
+          </AdErrorBoundary>
         )}
 
         {/* Rewarded ad — user-triggered, grants a one-time revive */}
         {showRewarded && (
-          <RewardedAd
-            onComplete={(rewarded) => {
-              setShowRewarded(false);
-              if (rewarded) {
-                analytics.track("rewarded_completed");
-                revive();
-              }
-            }}
-          />
+          <AdErrorBoundary onError={onRewardedError}>
+            <RewardedAd
+              onComplete={(rewarded) => {
+                setShowRewarded(false);
+                if (rewarded) {
+                  analytics.track("rewarded_completed");
+                  revive();
+                }
+              }}
+            />
+          </AdErrorBoundary>
         )}
       </div>
     </div>

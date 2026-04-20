@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { analytics } from "../analytics/Analytics";
 
 /*
  * InterstitialAd — full-screen ad shown at natural restart transitions (max once per 2.5 min)
@@ -44,16 +45,28 @@ interface Props {
   onClose: () => void;
 }
 
+// Hard failsafe: auto-dismiss if never closed (covers SDK hangs in production)
+const FAILSAFE_MS = 12_000;
+
 export default function InterstitialAd({ onClose }: Props) {
   const [countdown, setCountdown] = useState(COUNTDOWN_SECS);
   const [loaded, setLoaded] = useState(false);
   const [ad] = useState(() => MOCK_ADS[Math.floor(Math.random() * MOCK_ADS.length)]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const closedRef = useRef(false);
+
+  const safeClose = () => {
+    if (closedRef.current) return;
+    closedRef.current = true;
+    onClose();
+  };
 
   useEffect(() => {
     const loadT = setTimeout(() => setLoaded(true), 400);
-    return () => clearTimeout(loadT);
-  }, []);
+    // Failsafe: if the ad is still showing after FAILSAFE_MS, dismiss it automatically
+    const failsafe = setTimeout(() => safeClose(), FAILSAFE_MS);
+    return () => { clearTimeout(loadT); clearTimeout(failsafe); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!loaded) return;
@@ -92,7 +105,7 @@ export default function InterstitialAd({ onClose }: Props) {
           }}>ADVERTISEMENT</div>
 
           <button
-            onClick={onClose}
+            onClick={safeClose}
             style={{
               position: "absolute", top: 10, right: 12,
               background: countdown === 0 ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)",
@@ -118,15 +131,17 @@ export default function InterstitialAd({ onClose }: Props) {
               color: "rgba(200,220,255,0.7)", margin: "0 0 28px",
               fontSize: 14, fontFamily: "'Segoe UI', sans-serif", lineHeight: 1.6,
             }}>{ad.body}</p>
-            <button style={{
-              background: ad.ctaColor,
-              border: "none", borderRadius: 24,
-              color: "white", padding: "12px 36px",
-              fontSize: 15, fontWeight: 700,
-              fontFamily: "'Segoe UI', sans-serif",
-              cursor: "pointer",
-              boxShadow: `0 4px 20px ${ad.ctaColor}55`,
-            }}>{ad.cta}</button>
+            <button
+              onClick={() => analytics.track("interstitial_cta_click", { ad_title: ad.title })}
+              style={{
+                background: ad.ctaColor,
+                border: "none", borderRadius: 24,
+                color: "white", padding: "12px 36px",
+                fontSize: 15, fontWeight: 700,
+                fontFamily: "'Segoe UI', sans-serif",
+                cursor: "pointer",
+                boxShadow: `0 4px 20px ${ad.ctaColor}55`,
+              }}>{ad.cta}</button>
           </div>
 
           <div style={{
