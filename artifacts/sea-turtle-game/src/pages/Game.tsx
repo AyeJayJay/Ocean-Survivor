@@ -6,6 +6,7 @@ import RewardedAd from "../ads/RewardedAd";
 import { adFrequencyManager } from "../ads/AdFrequencyManager";
 import { analytics } from "../analytics/Analytics";
 import { AdErrorBoundary } from "../ads/AdErrorBoundary";
+import { soundManager } from "../audio/SoundManager";
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 640;
@@ -478,6 +479,8 @@ export default function Game() {
   const [gameplayBannerVisible, setGameplayBannerVisible] = useState(true);
   // Delay death-screen action buttons to prevent accidental taps on rapid death
   const [deathButtonsReady, setDeathButtonsReady] = useState(false);
+  // Sound mute toggle — mirrors soundManager's persisted state
+  const [soundMuted, setSoundMuted] = useState(soundManager.muted);
 
   // Theme milestone tracking (no difficulty ramp)
   const themeStepRef = useRef(0);
@@ -590,6 +593,7 @@ export default function Game() {
     if (stateRef.current==="idle") { resetGame(); return; }
     if (stateRef.current==="dead") { attemptRestart(); return; }
     if (stateRef.current==="playing") {
+      soundManager.playBubble();
       turtleRef.current.vy = JUMP_FORCE;
       const theme = THEMES[themeIdxRef.current];
       for (let i=0;i<5;i++) particlesRef.current.push({x:TURTLE_X,y:turtleRef.current.y,vx:-1-Math.random()*2,vy:-1-Math.random()*2,alpha:0.8,color:theme.particleColors[0],size:2+Math.random()*3});
@@ -749,6 +753,7 @@ export default function Game() {
           t.x -= TRASH_SPEED;
           const dx = TURTLE_X - t.x; const dy = turtle.y - (t.y + Math.sin(tick*0.025+t.phase)*8);
           if (Math.sqrt(dx*dx+dy*dy) < 34) {
+            soundManager.playCollect();
             trashCountRef.current++;
             floatTextsRef.current.push({x:t.x,y:t.y-20,text:`+1 🧹`,alpha:1,vy:-1.2});
             for (let i=0;i<8;i++) { const a=Math.random()*Math.PI*2; particlesRef.current.push({x:t.x,y:t.y,vx:Math.cos(a)*3,vy:Math.sin(a)*3,alpha:0.9,color:"#80e8ff",size:2+Math.random()*3}); }
@@ -862,6 +867,34 @@ export default function Game() {
           style={{ display:"block", cursor:"pointer" }}
           onPointerDown={handleTap}
         />
+
+        {/* Sound mute toggle — always visible, top-right corner */}
+        {!showInterstitial && !showRewarded && (
+          <button
+            className="no-jump"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              soundManager.toggle();
+              setSoundMuted(soundManager.muted);
+            }}
+            title={soundMuted ? "Unmute sounds" : "Mute sounds"}
+            style={{
+              position: "absolute",
+              top: 8, right: 8,
+              width: 30, height: 30,
+              background: "rgba(0,0,0,0.35)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 14, cursor: "pointer",
+              color: "white", zIndex: 10,
+              backdropFilter: "blur(2px)",
+              transition: "background 0.2s",
+            }}
+          >
+            {soundMuted ? "🔇" : "🔊"}
+          </button>
+        )}
 
         {/* Gameplay banner — compact strip at top, auto-hides near obstacles.
             interactive=false: impression-only during play; taps never register
