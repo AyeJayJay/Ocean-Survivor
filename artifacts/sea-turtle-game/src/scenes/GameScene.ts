@@ -31,6 +31,24 @@ type GameState = "playing" | "dead";
  *   playing → (collision) → dead → (revive command) → playing
  *   playing → (collision) → dead → (restart command) → GameOverScene
  *
+ * REVIVE / RESTART UX DESIGN
+ * ──────────────────────────
+ * When the turtle dies, GameScene enters the "dead" state but does NOT
+ * immediately transition to GameOverScene. Instead, it emits a "dead" game-
+ * state event; App.tsx surfaces an overlay 750 ms later with two choices:
+ *
+ *   1. "Watch Ad — Continue"  → RewardedAd plays → emitReviveCommand({revived:true})
+ *                               → doRevive() restores turtle at death Y and resumes
+ *
+ *   2. "Restart"              → emitRestartCommand() → goToGameOver() fades
+ *                               to GameOverScene, which shows final score + high score
+ *
+ * This "revive while still in-run" pattern (used by Subway Surfers, Temple Run
+ * etc.) is intentionally chosen over showing the offer on GameOverScene: the
+ * player can see the game world frozen at the moment of death, raising emotional
+ * investment and ad conversion rate. The GameOverScene is purely a score summary
+ * screen; the ad/revive lifecycle is entirely owned by GameScene + App.tsx.
+ *
  * React shell (App.tsx) handles all ad UI; this scene communicates via EventBus.
  */
 export class GameScene extends Phaser.Scene {
