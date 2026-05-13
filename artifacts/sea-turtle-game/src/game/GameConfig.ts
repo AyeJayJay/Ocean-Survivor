@@ -41,7 +41,8 @@ export const SCORE_DIST_DIVISOR = 15; // px per score point (~12.5 pts/s at star
 export const GAP_SHRINK_INTERVAL = 1; // shrink every cleared pair
 
 // ── LocalStorage keys ─────────────────────────────────────────────────────────
-export const LS_HIGH_SCORE = "os_high_score";
+export const LS_HIGH_SCORE = "os_high_score"; // legacy key — SaveManager migrates from this
+export const LS_SAVE_KEY   = "os_save_v1";    // versioned save managed by SaveManager
 
 // ── Scene keys ────────────────────────────────────────────────────────────────
 export const SCENE = {

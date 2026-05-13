@@ -1,24 +1,39 @@
 import Phaser from "phaser";
-import { SCENE, GAME_WIDTH, GAME_HEIGHT, LS_HIGH_SCORE } from "../game/GameConfig";
+import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
 import { emitSceneChange, emitGameState } from "../game/EventBus";
+import { getSkinDef, SKIN_DEFS } from "../player/SkinDefs";
+import { saveManager } from "../save/SaveManager";
+import type { SkinId } from "../save/SaveManager";
 
 interface GameOverData {
   score: number;
   bestScore: number;
   shellsCollected: number;
   newRecord: boolean;
+  newlyUnlockedSkins: SkinId[];
+  lifetimeShells: number;
 }
 
 /*
  * GameOverScene — displayed after the turtle dies and the player declines/skips
  * the revive ad. The React shell (App.tsx) triggers an interstitial ad check the
  * moment it detects this scene becoming active.
+ *
+ * Shows: score, new-record badge, lifetime shells, newly unlocked skin cards,
+ * a skin selection picker (placeholder for full Task 3 screen), and nav buttons.
  */
 export class GameOverScene extends Phaser.Scene {
   constructor() { super(SCENE.GAME_OVER); }
 
   create(data: GameOverData): void {
-    const { score = 0, bestScore = 0, shellsCollected = 0, newRecord = false } = data ?? {};
+    const {
+      score = 0,
+      bestScore = 0,
+      shellsCollected = 0,
+      newRecord = false,
+      newlyUnlockedSkins = [],
+      lifetimeShells = 0,
+    } = data ?? {};
 
     const cx = GAME_WIDTH / 2;
 
@@ -27,23 +42,30 @@ export class GameOverScene extends Phaser.Scene {
     overlay.fillStyle(0x000000, 0.72);
     overlay.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Panel background
+    // Panel background — height grows with unlocks
+    const hasUnlocks = newlyUnlockedSkins.length > 0;
+    const unlockedSkins = saveManager.unlockedSkins;
+    const hasSkinChoice = unlockedSkins.length > 1;
     const panelW = 360;
-    const panelH = 320;
+    let panelH = 340; // base height includes skin picker row
+    if (hasUnlocks) panelH += newlyUnlockedSkins.length * 36;
+
     const panelX = cx - panelW / 2;
-    const panelY = GAME_HEIGHT / 2 - panelH / 2;
+    // Clamp panel top so it never goes above y=20
+    const panelY = Math.max(20, GAME_HEIGHT / 2 - panelH / 2);
+
     overlay.fillStyle(0x021020, 0.94);
     overlay.fillRoundedRect(panelX, panelY, panelW, panelH, 18);
     overlay.lineStyle(1.5, 0x204060, 0.7);
     overlay.strokeRoundedRect(panelX, panelY, panelW, panelH, 18);
 
-    // Title
+    // ── Title ────────────────────────────────────────────────────────────────
     this.add.text(cx, panelY + 36, "GAME OVER", {
       fontSize: "30px", fontFamily: "Arial Black, sans-serif",
       color: "#ff6060", stroke: "#300000", strokeThickness: 4,
     }).setOrigin(0.5);
 
-    // Score
+    // ── Score ────────────────────────────────────────────────────────────────
     this.add.text(cx, panelY + 88, score.toString(), {
       fontSize: "64px", fontFamily: "Arial Black, sans-serif",
       color: "#ffffff", stroke: "#000000", strokeThickness: 5,
@@ -66,16 +88,125 @@ export class GameOverScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
-    // Shell count
+    // ── Shell count ───────────────────────────────────────────────────────────
+    let shellY = panelY + 200;
     if (shellsCollected > 0) {
-      this.add.text(cx, panelY + 200, `🐚  ${shellsCollected} shell${shellsCollected !== 1 ? "s" : ""} collected`, {
+      this.add.text(cx, shellY, `🐚  ${shellsCollected} shell${shellsCollected !== 1 ? "s" : ""} collected`, {
         fontSize: "13px", fontFamily: "Arial, sans-serif",
         color: "#ffd84a",
       }).setOrigin(0.5);
+      shellY += 18;
+    }
+    this.add.text(cx, shellY, `Lifetime: ${lifetimeShells} 🐚`, {
+      fontSize: "12px", fontFamily: "Arial, sans-serif",
+      color: "rgba(255,216,74,0.55)",
+    }).setOrigin(0.5);
+
+    // ── Newly unlocked skin cards ─────────────────────────────────────────────
+    let unlockY = panelY + 232;
+
+    if (hasUnlocks) {
+      this.add.text(cx, unlockY, "🎉  NEW SKIN UNLOCKED!", {
+        fontSize: "13px", fontFamily: "Arial Black, sans-serif",
+        color: "#80ffcc", stroke: "#003020", strokeThickness: 3,
+      }).setOrigin(0.5);
+      unlockY += 22;
+
+      for (let i = 0; i < newlyUnlockedSkins.length; i++) {
+        const skinId = newlyUnlockedSkins[i];
+        const skinDef = getSkinDef(skinId);
+        const rowY = unlockY + i * 36;
+
+        const cardG = this.add.graphics();
+        cardG.fillStyle(0x00ffaa, 0.08);
+        cardG.fillRoundedRect(panelX + 20, rowY - 10, panelW - 40, 28, 8);
+        cardG.lineStyle(1, 0x00ffaa, 0.3);
+        cardG.strokeRoundedRect(panelX + 20, rowY - 10, panelW - 40, 28, 8);
+
+        this.add.text(cx, rowY + 4, skinDef.name, {
+          fontSize: "14px", fontFamily: "Arial, sans-serif",
+          color: "#80ffcc", stroke: "#003020", strokeThickness: 2,
+        }).setOrigin(0.5);
+
+        this.tweens.add({
+          targets: cardG, alpha: { from: 0, to: 1 },
+          duration: 400, delay: i * 150, ease: "Power2",
+        });
+      }
+
+      unlockY += newlyUnlockedSkins.length * 36 + 8;
     }
 
-    // Play Again button
-    const playBtn = this.add.text(cx - 78, panelY + 258, "▶  PLAY AGAIN", {
+    // ── Skin selection picker (placeholder for full Task 3 screen) ────────────
+    //
+    // Shows current skin with ◄ ► arrows to cycle through unlocked skins.
+    // The selection is persisted immediately via saveManager.selectSkin().
+
+    const skinPickerY = panelY + panelH - 100;
+
+    this.add.text(cx, skinPickerY - 14, "SKIN", {
+      fontSize: "10px", fontFamily: "Arial, sans-serif",
+      color: "rgba(160,200,240,0.5)", letterSpacing: 3,
+    }).setOrigin(0.5);
+
+    // Current skin index tracker (mutable closure)
+    let currentIdx = unlockedSkins.indexOf(saveManager.selectedSkin);
+    if (currentIdx < 0) currentIdx = 0;
+
+    const skinNameText = this.add.text(cx, skinPickerY + 8, getSkinDef(unlockedSkins[currentIdx]).name, {
+      fontSize: "14px", fontFamily: "Arial, sans-serif",
+      color: "#c0e8ff",
+    }).setOrigin(0.5);
+
+    if (hasSkinChoice) {
+      // Left arrow
+      const leftArrow = this.add.text(panelX + 32, skinPickerY + 8, "◄", {
+        fontSize: "18px", fontFamily: "Arial, sans-serif",
+        color: "#4a9fdf",
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      leftArrow.on("pointerdown", () => {
+        currentIdx = (currentIdx - 1 + unlockedSkins.length) % unlockedSkins.length;
+        const id = unlockedSkins[currentIdx] as SkinId;
+        saveManager.selectSkin(id);
+        skinNameText.setText(getSkinDef(id).name);
+      });
+      leftArrow.on("pointerover",  () => leftArrow.setStyle({ color: "#80c8ff" }));
+      leftArrow.on("pointerout",   () => leftArrow.setStyle({ color: "#4a9fdf" }));
+
+      // Right arrow
+      const rightArrow = this.add.text(panelX + panelW - 32, skinPickerY + 8, "►", {
+        fontSize: "18px", fontFamily: "Arial, sans-serif",
+        color: "#4a9fdf",
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      rightArrow.on("pointerdown", () => {
+        currentIdx = (currentIdx + 1) % unlockedSkins.length;
+        const id = unlockedSkins[currentIdx] as SkinId;
+        saveManager.selectSkin(id);
+        skinNameText.setText(getSkinDef(id).name);
+      });
+      rightArrow.on("pointerover",  () => rightArrow.setStyle({ color: "#80c8ff" }));
+      rightArrow.on("pointerout",   () => rightArrow.setStyle({ color: "#4a9fdf" }));
+
+      // Unlock hint text
+      this.add.text(cx, skinPickerY + 26, "◄  choose skin  ►", {
+        fontSize: "10px", fontFamily: "Arial, sans-serif",
+        color: "rgba(100,160,220,0.4)",
+      }).setOrigin(0.5);
+    } else {
+      // Only one skin — show a subtle hint
+      this.add.text(cx, skinPickerY + 24, "unlock more skins by playing!", {
+        fontSize: "10px", fontFamily: "Arial, sans-serif",
+        color: "rgba(100,160,220,0.35)",
+      }).setOrigin(0.5);
+    }
+
+    // ── Buttons ───────────────────────────────────────────────────────────────
+
+    const btnY = panelY + panelH - 46;
+
+    const playBtn = this.add.text(cx - 78, btnY, "▶  PLAY AGAIN", {
       fontSize: "14px", fontFamily: "Arial, sans-serif",
       color: "#ffffff", backgroundColor: "#1a6e40",
       padding: { x: 16, y: 10 }, stroke: "#0a3018", strokeThickness: 2,
@@ -89,8 +220,7 @@ export class GameOverScene extends Phaser.Scene {
     playBtn.on("pointerover", () => playBtn.setStyle({ color: "#80ffc0" }));
     playBtn.on("pointerout",  () => playBtn.setStyle({ color: "#ffffff" }));
 
-    // Menu button
-    const menuBtn = this.add.text(cx + 78, panelY + 258, "⌂  MENU", {
+    const menuBtn = this.add.text(cx + 78, btnY, "⌂  MENU", {
       fontSize: "14px", fontFamily: "Arial, sans-serif",
       color: "#c0d8ff", backgroundColor: "#102840",
       padding: { x: 16, y: 10 }, stroke: "#061428", strokeThickness: 2,

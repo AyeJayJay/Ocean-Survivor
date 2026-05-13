@@ -2,10 +2,13 @@ import Phaser from "phaser";
 import {
   GAME_WIDTH, GAME_HEIGHT, PLAYER_X, INITIAL_SPEED, INITIAL_GAP,
   SPEED_RAMP, MAX_SPEED, GAP_SHRINK_RATE, MIN_GAP,
-  SCORE_DIST_DIVISOR, LS_HIGH_SCORE, SCENE,
+  SCORE_DIST_DIVISOR, SCENE,
 } from "../game/GameConfig";
 import { Player } from "../player/Player";
 import { ObstacleManager } from "../obstacles/ObstacleManager";
+import { ProgressionManager } from "../progression/ProgressionManager";
+import { saveManager } from "../save/SaveManager";
+import type { SkinId } from "../save/SaveManager";
 import { emitGameState, emitSceneChange, onCommand } from "../game/EventBus";
 import { analytics } from "../analytics/Analytics";
 
@@ -55,6 +58,7 @@ export class GameScene extends Phaser.Scene {
   // Game objects
   private player!: Player;
   private obstacleManager!: ObstacleManager;
+  private progressionManager!: ProgressionManager;
 
   // Background
   private bgGfx!: Phaser.GameObjects.Graphics;
@@ -84,7 +88,7 @@ export class GameScene extends Phaser.Scene {
   // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
   create(): void {
-    this.bestScore = parseInt(localStorage.getItem(LS_HIGH_SCORE) ?? "0", 10) || 0;
+    this.bestScore = saveManager.highScore;
     this.score = 0;
     this.distanceTraveled = 0;
     this.reviveUsed = false;
@@ -96,19 +100,24 @@ export class GameScene extends Phaser.Scene {
     this.tick = 0;
     this.bubbles = [];
 
-    // Background
+    // Background (depth 0, 1)
     this.bgGfx = this.add.graphics().setDepth(0);
     this.fxGfx = this.add.graphics().setDepth(1);
     this.buildBgShapes();
 
-    // Player
+    // Progression manager (depth 2, 3 — above background, below obstacles)
+    this.progressionManager = new ProgressionManager(this, () => {
+      saveManager.setRestorationMilestone();
+    });
+
+    // Player (depth 20)
     this.player = new Player(this, PLAYER_X, GAME_HEIGHT / 2);
 
-    // ObstacleManager
+    // ObstacleManager (depth 5, 8)
     this.obstacleManager = new ObstacleManager(this);
     this.obstacleManager.reset(this.speed, this.gap);
 
-    // HUD
+    // HUD (depth 30)
     this.scoreText = this.add.text(GAME_WIDTH / 2, 52, "0", {
       fontSize: "42px", fontFamily: "Arial Black, sans-serif",
       color: "#ffffff", stroke: "#000000", strokeThickness: 5,
@@ -124,8 +133,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-SPACE", this.handleInput, this);
 
     // Command listener from React (revive / restart).
-    // Cleanup is bound to the Phaser SHUTDOWN scene event so the window
-    // listener is always removed — even if shutdown() is never called manually.
+    // Cleanup is bound to the Phaser SHUTDOWN scene event.
     const removeCommandListener = onCommand((detail) => {
       if (detail.type === "revive") {
         if (detail.revived) this.doRevive();
@@ -138,6 +146,7 @@ export class GameScene extends Phaser.Scene {
       removeCommandListener();
       this.player?.destroy();
       this.obstacleManager?.destroy();
+      this.progressionManager?.destroy();
     }, this);
 
     // Notify React
@@ -161,6 +170,9 @@ export class GameScene extends Phaser.Scene {
       this.speed = Math.min(this.speed + SPEED_RAMP * dt, MAX_SPEED);
       this.obstacleManager.setSpeed(this.speed);
 
+      // Progression — ticks elapsed time and updates visual layers
+      this.progressionManager.update(dt, this.scrollX);
+
       // Update gameplay objects
       this.player.update();
       this.obstacleManager.update(delta);
@@ -180,7 +192,7 @@ export class GameScene extends Phaser.Scene {
         this.obstacleManager.setGap(this.gap);
       }
 
-      // Shells
+      // Shells — collect and persist to SaveManager
       if (this.obstacleManager.checkShellCollision(this.player.x, this.player.y)) {
         this.shellText.setText(`🐚 ${this.obstacleManager.shellsCollected}`);
       }
@@ -218,12 +230,6 @@ export class GameScene extends Phaser.Scene {
     // Kill physics momentum
     this.player.kill();
 
-    // Update high score
-    if (this.score > this.bestScore) {
-      this.bestScore = this.score;
-      localStorage.setItem(LS_HIGH_SCORE, this.bestScore.toString());
-    }
-
     // Freeze obstacle scrolling
     this.speed = 0;
     this.obstacleManager.setSpeed(0);
@@ -259,12 +265,27 @@ export class GameScene extends Phaser.Scene {
   }
 
   private goToGameOver(): void {
+    const sessionShells = this.obstacleManager.shellsCollected;
+    const sessionDuration = Math.round((Date.now() - this.sessionStartTime) / 1000);
+
     analytics.track("game_over", {
       score: this.score,
       best_score: this.bestScore,
-      shells: this.obstacleManager.shellsCollected,
-      duration_s: Math.round((Date.now() - this.sessionStartTime) / 1000),
+      shells: sessionShells,
+      duration_s: sessionDuration,
     });
+
+    // Persist game results — must happen before checkNewUnlocks()
+    saveManager.recordGameOver(this.score, sessionShells);
+
+    // Update local bestScore from SaveManager (it handles new-record logic)
+    this.bestScore = saveManager.highScore;
+
+    // Check and commit newly unlocked skins
+    const newlyUnlocked = saveManager.checkNewUnlocks();
+    for (const id of newlyUnlocked) {
+      saveManager.unlockSkin(id);
+    }
 
     const newRecord = this.score > 0 && this.score === this.bestScore;
 
@@ -273,8 +294,10 @@ export class GameScene extends Phaser.Scene {
         this.scene.start(SCENE.GAME_OVER, {
           score: this.score,
           bestScore: this.bestScore,
-          shellsCollected: this.obstacleManager.shellsCollected,
+          shellsCollected: sessionShells,
           newRecord,
+          newlyUnlockedSkins: newlyUnlocked as SkinId[],
+          lifetimeShells: saveManager.lifetimeShells,
         });
       }
     });
@@ -331,7 +354,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateBubbles(dt: number): void {
-    if (Math.random() < 5 * dt) { // ~5 per second on average
+    // Bubble count scales with restoration stage
+    const stage = this.progressionManager?.stage ?? 0;
+    const spawnRate = 5 + stage * 1.5; // more bubbles as ocean heals
+    if (Math.random() < spawnRate * dt) {
       this.bubbles.push({
         x: Math.random() * GAME_WIDTH, y: GAME_HEIGHT + 5,
         r: 2 + Math.random() * 5,
@@ -347,13 +373,54 @@ export class GameScene extends Phaser.Scene {
   private drawBackground(): void {
     const g = this.bgGfx;
     g.clear();
-    g.fillGradientStyle(0x010609, 0x010609, 0x041828, 0x041828, 1, 1, 1, 1);
+
+    // Blend from dark polluted ocean → bright restored ocean based on stage
+    const bf = this.progressionManager?.brightnessFactor ?? 0;
+
+    // Dark palette (polluted): deep dark blue-black
+    // Bright palette (restored): medium ocean blue-teal
+    const topDark   = 0x010609;
+    const botDark   = 0x041828;
+    const topBright = 0x042848;
+    const botBright = 0x0a4060;
+
+    const topColor = Phaser.Display.Color.Interpolate.ColorWithColor(
+      Phaser.Display.Color.IntegerToColor(topDark),
+      Phaser.Display.Color.IntegerToColor(topBright),
+      100, Math.round(bf * 100)
+    );
+    const botColor = Phaser.Display.Color.Interpolate.ColorWithColor(
+      Phaser.Display.Color.IntegerToColor(botDark),
+      Phaser.Display.Color.IntegerToColor(botBright),
+      100, Math.round(bf * 100)
+    );
+
+    const topInt = Phaser.Display.Color.GetColor(topColor.r, topColor.g, topColor.b);
+    const botInt = Phaser.Display.Color.GetColor(botColor.r, botColor.g, botColor.b);
+
+    g.fillGradientStyle(topInt, topInt, botInt, botInt, 1, 1, 1, 1);
     g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+    // Light shafts at higher restoration stages
+    if (bf > 0.3) {
+      const shaftAlpha = (bf - 0.3) * 0.06;
+      g.fillStyle(0x40d0ff, shaftAlpha);
+      for (let i = 0; i < 5; i++) {
+        const sx = (i * 120 - (this.scrollX * 0.04) % 600 + 600) % 600;
+        g.beginPath();
+        g.moveTo(sx - 20, 0);
+        g.lineTo(sx + 20, 0);
+        g.lineTo(sx + 60, GAME_HEIGHT);
+        g.lineTo(sx + 20, GAME_HEIGHT);
+        g.closePath();
+        g.fillPath();
+      }
+    }
 
     const fx = this.fxGfx;
     fx.clear();
 
-    // Parallax shapes
+    // Parallax shapes (silhouette seabed shapes)
     for (const shape of this.bgShapes) {
       const ratio = shape.layer === 0 ? 0.12 : 0.28;
       const offset = this.scrollX * ratio;
@@ -362,9 +429,18 @@ export class GameScene extends Phaser.Scene {
       for (let rep = 0; rep < 2; rep++) {
         const dx = baseX + rep * GAME_WIDTH - GAME_WIDTH;
         if (dx + shape.w < 0 || dx > GAME_WIDTH) continue;
-        const col = shape.layer === 0 ? 0x020e1c : 0x031526;
+
+        // Shapes brighten slightly at higher stages
+        const colDark   = shape.layer === 0 ? 0x020e1c : 0x031526;
+        const colBright = shape.layer === 0 ? 0x083858 : 0x0c4a70;
+        const col = Phaser.Display.Color.Interpolate.ColorWithColor(
+          Phaser.Display.Color.IntegerToColor(colDark),
+          Phaser.Display.Color.IntegerToColor(colBright),
+          100, Math.round(bf * 100)
+        );
+        const colInt = Phaser.Display.Color.GetColor(col.r, col.g, col.b);
         const alpha = shape.layer === 0 ? 0.6 : 0.8;
-        fx.fillStyle(col, alpha);
+        fx.fillStyle(colInt, alpha);
         if (shape.type === "ellipse") {
           fx.fillEllipse(dx + shape.w / 2, shape.y, shape.w, shape.h);
         } else {
@@ -374,8 +450,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Bubbles
+    const bubbleColor = bf > 0.5 ? 0xa0eeff : 0x80d0ff;
     for (const b of this.bubbles) {
-      fx.lineStyle(1.2, 0x80d0ff, b.alpha);
+      fx.lineStyle(1.2, bubbleColor, b.alpha);
       fx.strokeCircle(b.x, b.y, b.r);
     }
   }

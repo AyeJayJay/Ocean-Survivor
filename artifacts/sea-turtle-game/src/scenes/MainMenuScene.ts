@@ -1,6 +1,7 @@
 import Phaser from "phaser";
-import { SCENE, GAME_WIDTH, GAME_HEIGHT, LS_HIGH_SCORE } from "../game/GameConfig";
+import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
 import { emitSceneChange } from "../game/EventBus";
+import { saveManager } from "../save/SaveManager";
 
 interface BgShape {
   x: number; y: number; w: number; h: number;
@@ -113,8 +114,8 @@ export class MainMenuScene extends Phaser.Scene {
       color: "#80ffe8", stroke: "#003a60", strokeThickness: 5,
     }).setOrigin(0.5).setDepth(20);
 
-    // High score
-    const hs = parseInt(localStorage.getItem(LS_HIGH_SCORE) ?? "0", 10) || 0;
+    // High score — read from SaveManager (single source of truth)
+    const hs = saveManager.highScore;
     if (hs > 0) {
       this.add.text(cx, GAME_HEIGHT * 0.2 + 104, `Best: ${hs}`, {
         fontSize: "17px", fontFamily: "Arial, sans-serif",

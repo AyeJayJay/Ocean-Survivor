@@ -8,6 +8,8 @@ import {
   TEX,
 } from "../game/GameConfig";
 import { soundManager } from "../audio/SoundManager";
+import { saveManager } from "../save/SaveManager";
+import { getSkinDef } from "./SkinDefs";
 
 /*
  * Player — baby sea turtle
@@ -19,6 +21,7 @@ import { soundManager } from "../audio/SoundManager";
  *    The art is drawn ONCE at local origin (0,0) and then the graphics object
  *    is repositioned each frame to match the physics sprite — no per-frame redraw.
  *  • Public API mirrors the old Game.tsx turtle: jump(), revive(), reset(), update().
+ *  • Skin is read from SaveManager at construction time and drawn once.
  */
 export class Player {
   readonly sprite: Phaser.Physics.Arcade.Image;
@@ -43,10 +46,10 @@ export class Player {
     // Circular collision hitbox (only the physics body size matters for manual collision)
     body.setCircle(PLAYER_RADIUS, -PLAYER_RADIUS, -PLAYER_RADIUS);
 
-    // Visual turtle (drawn once; repositioned each frame)
+    // Visual turtle — drawn once using the selected skin; repositioned each frame
     this.gfx = scene.add.graphics();
     this.gfx.setDepth(20);
-    this.drawTurtle();
+    this.drawSkin();
   }
 
   // ── Public API ───────────────────────────────────────────────────────────────
@@ -110,77 +113,14 @@ export class Player {
     this.gfx.destroy();
   }
 
-  // ── Procedural turtle drawing ─────────────────────────────────────────────────
+  // ── Skin drawing ──────────────────────────────────────────────────────────────
   //
-  // All coordinates are in local space relative to the turtle's centre.
-  // The turtle faces RIGHT (positive x direction).
+  // Reads the currently selected skin from SaveManager and delegates to the
+  // skin's draw function. All skin coordinates are in local space (turtle centre).
 
-  private drawTurtle(): void {
-    const g = this.gfx;
-    g.clear();
-
-    // ── Tail / rear flipper ─────────────────────────────────────────────────
-    g.fillStyle(0x1e6b38, 1);
-    g.fillEllipse(-21, 0, 12, 7);
-
-    // ── Four side flippers ───────────────────────────────────────────────────
-    g.fillStyle(0x236e3c, 1);
-    g.fillEllipse(9, -18, 11, 22);   // front-top
-    g.fillEllipse(9, 18, 11, 22);    // front-bottom
-    g.fillEllipse(-12, -13, 9, 17);  // rear-top
-    g.fillEllipse(-12, 13, 9, 17);   // rear-bottom
-
-    // ── Shell base ───────────────────────────────────────────────────────────
-    g.fillStyle(0x2d8a4e, 1);
-    g.fillEllipse(0, 0, 40, 32);
-
-    // Shell mid-tone highlight
-    g.fillStyle(0x3ea85e, 0.55);
-    g.fillEllipse(-3, -5, 30, 24);
-
-    // Shell bright highlight
-    g.fillStyle(0x62d488, 0.35);
-    g.fillEllipse(-6, -7, 20, 15);
-
-    // Shell hexagon center outline
-    g.lineStyle(1.5, 0x1a5c33, 0.55);
-    g.strokeEllipse(0, 0, 16, 13);
-
-    // Shell radial lines from center to edge
-    g.lineStyle(1.2, 0x1a5c33, 0.38);
-    for (let i = 0; i < 6; i++) {
-      const ang = (i / 6) * Math.PI * 2;
-      const ix = Math.cos(ang) * 8;
-      const iy = Math.sin(ang) * 6.5;
-      const ox = Math.cos(ang) * 18;
-      const oy = Math.sin(ang) * 14;
-      g.beginPath();
-      g.moveTo(ix, iy);
-      g.lineTo(ox, oy);
-      g.strokePath();
-    }
-
-    // ── Head ─────────────────────────────────────────────────────────────────
-    g.fillStyle(0x39a65b, 1);
-    g.fillEllipse(21, -1, 19, 15);
-
-    // Head highlight
-    g.fillStyle(0x7ee8a8, 0.45);
-    g.fillEllipse(19, -3, 12, 9);
-
-    // ── Eye ──────────────────────────────────────────────────────────────────
-    g.fillStyle(0x1a1a2e, 1);
-    g.fillCircle(27, -4, 3);
-
-    // Eye specular
-    g.fillStyle(0xffffff, 1);
-    g.fillCircle(28, -5, 1.2);
-
-    // ── Smile (tiny arc via line) ─────────────────────────────────────────────
-    g.lineStyle(1, 0x1a6e38, 0.8);
-    g.beginPath();
-    g.moveTo(22, 1);
-    g.lineTo(26, 2.5);
-    g.strokePath();
+  private drawSkin(): void {
+    const skinId = saveManager.selectedSkin;
+    const skin = getSkinDef(skinId);
+    skin.drawFn(this.gfx);
   }
 }
