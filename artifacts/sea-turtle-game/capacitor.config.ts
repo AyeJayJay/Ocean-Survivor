@@ -23,8 +23,17 @@ const config: CapacitorConfig = {
       overlaysWebView: true,
     },
 
-    // AdMob — initializeForTesting is controlled by USE_TEST_ADS in AdConfig.ts
-    // Do not add initializeForTesting here; it would override the runtime flag.
+    // AdMob — initializeForTesting is controlled by USE_TEST_ADS in AdConfig.ts.
+    // Do not add initializeForTesting here; it would override the build-env flag.
+    //
+    // iOS native setup (run once on Mac after `npx cap add ios`):
+    //   pnpm cap:ios:setup   ← adds NSUserTrackingUsageDescription + GADApplicationIdentifier
+    //   npx cap sync ios     ← propagates Capacitor config into the Xcode project
+    //
+    // Android native setup (run once after `npx cap add android`):
+    //   Add to android/app/src/main/AndroidManifest.xml inside <application>:
+    //   <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
+    //              android:value="ca-app-pub-1287355220585536~4125519824"/>
   },
 
   android: {

@@ -11,6 +11,7 @@
     "cap:build": "vite build --config vite.config.ts && cap sync",
     "cap:android": "cap open android",
     "cap:ios": "cap open ios",
+    "cap:ios:setup": "node scripts/ios-att-setup.mjs",
     "icons:generate": "node scripts/generate-icons.mjs"
   },
   "devDependencies": {

@@ -1,23 +1,43 @@
 /*
  * AdConfig — Centralized ad unit ID configuration for Ocean Survivor
  *
- * HOW TO SWAP TEST IDs FOR PRODUCTION:
- * ─────────────────────────────────────
- * 1. Create your AdMob account at https://admob.google.com
- * 2. Add your app and create three ad units: Banner, Interstitial, Rewarded
- * 3. Copy the ad unit IDs (format: ca-app-pub-XXXXXXXXXXXXXXXX/NNNNNNNNNN)
- * 4. Replace the values in PRODUCTION_AD_UNITS below
- * 5. Set USE_TEST_ADS = false before building for production
+ * ── How ad mode is selected ──────────────────────────────────────────────────
  *
- * IMPORTANT: Never submit to app stores with USE_TEST_ADS = true.
- * IMPORTANT: The AdMob App IDs also need to be set in native config files:
- *   Android: artifacts/sea-turtle-game/android/app/src/main/AndroidManifest.xml
- *            → <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" ...>
- *   iOS:     artifacts/sea-turtle-game/ios/App/App/Info.plist
- *            → GADApplicationIdentifier key
+ * USE_TEST_ADS is automatically set by the Vite build environment:
+ *   - Development  (`pnpm dev`)   → true  → Google test ad units are used
+ *   - Production   (`pnpm build`) → false → Your real AdMob IDs are used
+ *
+ * You never need to flip this flag manually.
+ *
+ * ── Safety fallback ──────────────────────────────────────────────────────────
+ *
+ * PROD_IDS_READY is checked at runtime. If any production ID still contains
+ * "REPLACE_ME", the app silently falls back to test ads instead of crashing
+ * or serving broken requests. You will see a console warning in dev tools.
+ *
+ * ── Remaining setup before release ───────────────────────────────────────────
+ *
+ * ✅  App ID         ca-app-pub-1287355220585536~4125519824
+ * ✅  Banner         ca-app-pub-1287355220585536/6841971059
+ * ✅  Interstitial   ca-app-pub-1287355220585536/6504271151
+ * ✅  Rewarded       ca-app-pub-1287355220585536/3317659015
+ *
+ * ── Native App ID registration (required for each platform) ──────────────────
+ *
+ *   Android:  android/app/src/main/AndroidManifest.xml
+ *             <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
+ *                        android:value="ca-app-pub-1287355220585536~4125519824"/>
+ *
+ *   iOS:      ios/App/App/Info.plist
+ *             <key>GADApplicationIdentifier</key>
+ *             <string>ca-app-pub-1287355220585536~4125519824</string>
+ *             (run `pnpm cap:ios:setup` after `npx cap add ios`)
  */
 
-export const USE_TEST_ADS = true;
+// Automatically true in `pnpm dev`, false in `pnpm build` — no manual flip needed.
+export const USE_TEST_ADS: boolean = import.meta.env.DEV;
+
+// ── Google-provided test ad unit IDs (safe to use during development) ─────────
 
 const TEST_AD_UNITS = {
   banner:       "ca-app-pub-3940256099942544/6300978111",
@@ -26,18 +46,36 @@ const TEST_AD_UNITS = {
   appId:        "ca-app-pub-3940256099942544~3347511713",
 } as const;
 
+// ── Production ad unit IDs (used in release builds) ───────────────────────────
+
 const PRODUCTION_AD_UNITS = {
-  // ── Ad unit IDs ────────────────────────────────────────────────────────────
-  // Create these in the AdMob console → Apps → Ocean Survivor → Ad units
-  // One unit each of type: Banner, Interstitial, Rewarded Video
-  banner:       "ca-app-pub-REPLACE_ME/REPLACE_ME_BANNER",
-  interstitial: "ca-app-pub-REPLACE_ME/REPLACE_ME_INTERSTITIAL",
-  rewarded:     "ca-app-pub-REPLACE_ME/REPLACE_ME_REWARDED",
-  // ── App ID (set) ───────────────────────────────────────────────────────────
+  banner:       "ca-app-pub-1287355220585536/6841971059",
+  interstitial: "ca-app-pub-1287355220585536/6504271151",
+  rewarded:     "ca-app-pub-1287355220585536/3317659015",
   appId:        "ca-app-pub-1287355220585536~4125519824",
 } as const;
 
-export const AD_UNITS = USE_TEST_ADS ? TEST_AD_UNITS : PRODUCTION_AD_UNITS;
+// ── Safety check ──────────────────────────────────────────────────────────────
+// If any production ID is still a placeholder, fall back to test ads and warn.
+// This prevents a broken release build from serving empty/errored ad requests.
+
+const PROD_IDS_READY =
+  !PRODUCTION_AD_UNITS.banner.includes("REPLACE_ME") &&
+  !PRODUCTION_AD_UNITS.interstitial.includes("REPLACE_ME") &&
+  !PRODUCTION_AD_UNITS.rewarded.includes("REPLACE_ME");
+
+if (!USE_TEST_ADS && !PROD_IDS_READY) {
+  console.warn(
+    "[AdMob] Production build detected but ad unit IDs are not configured. " +
+    "Falling back to test ads. Fill in PRODUCTION_AD_UNITS in AdConfig.ts."
+  );
+}
+
+export const AD_UNITS = USE_TEST_ADS || !PROD_IDS_READY
+  ? TEST_AD_UNITS
+  : PRODUCTION_AD_UNITS;
+
+// ── AdMob initialization and per-request configuration ───────────────────────
 
 export const AD_CONFIG = {
   banner: {
@@ -56,9 +94,9 @@ export const AD_CONFIG = {
   },
 
   initialize: {
-    requestTrackingAuthorization: true,
+    requestTrackingAuthorization: true, // triggers iOS ATT prompt on first launch
     testingDevices: [] as string[],
-    initializeForTesting: USE_TEST_ADS,
+    initializeForTesting: USE_TEST_ADS, // matches the build environment automatically
     tagForChildDirectedTreatment: false,
     tagForUnderAgeOfConsent: false,
   },
