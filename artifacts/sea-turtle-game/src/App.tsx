@@ -13,8 +13,10 @@ import { soundManager } from "./audio/SoundManager";
 import { saveManager } from "./save/SaveManager";
 import DonateModal from "./pages/DonateModal";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import AboutScreen from "./pages/AboutScreen";
 import {
   onGameState, onSceneChange, onAchievementToast, onGameOverAd, onPrivacyPolicy,
+  onAdPreferences, onAbout,
   emitReviveCommand, emitRestartCommand, emitGameOverAdResult,
   type GameUIState, type GameStatePayload, type ScenePayload,
   type AchievementToastPayload,
@@ -194,14 +196,23 @@ function GameShell() {
       }
     });
 
-    // Navigate to the /privacy route instead of showing an overlay —
-    // this makes Privacy Policy accessible via a real URL on web and
-    // as a full screen within the Capacitor WebView on native.
+    // Navigate to /privacy — accessible as a real URL on web and full-screen
+    // within the Capacitor WebView on native.
     const offPrivacy = onPrivacyPolicy(() => {
       navigate("/privacy");
     });
 
-    return () => { offState(); offScene(); offToast(); offGameOverAd(); offPrivacy(); };
+    // Re-show the consent modal so players can change their ad preference.
+    const offAdPrefs = onAdPreferences(() => {
+      setShowAdConsent(true);
+    });
+
+    // Navigate to /about (About & Terms screen).
+    const offAbout = onAbout(() => {
+      navigate("/about");
+    });
+
+    return () => { offState(); offScene(); offToast(); offGameOverAd(); offPrivacy(); offAdPrefs(); offAbout(); };
   }, [navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeToast = useCallback((key: number) => {
@@ -417,6 +428,7 @@ export default function App() {
   return (
     <Switch>
       <Route path="/privacy">{() => <PrivacyPolicy />}</Route>
+      <Route path="/about">{() => <AboutScreen />}</Route>
       <Route>{() => <GameShell />}</Route>
     </Switch>
   );

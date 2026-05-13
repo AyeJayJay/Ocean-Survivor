@@ -56,7 +56,9 @@ const EV = {
   COMMAND:            "os:command",           // React  → Phaser
   ACHIEVEMENT_TOAST:  "os:achievement-toast", // Phaser → React
   GAME_OVER_AD:       "os:game-over-ad",      // bidirectional (request + result)
-  PRIVACY_POLICY:     "os:privacy-policy",    // Phaser → React (open privacy overlay)
+  PRIVACY_POLICY:     "os:privacy-policy",    // Phaser → React (open /privacy route)
+  AD_PREFERENCES:     "os:ad-preferences",   // Phaser → React (re-show consent modal)
+  ABOUT:              "os:about",             // Phaser → React (open /about route)
 } as const;
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
@@ -138,4 +140,31 @@ export function onPrivacyPolicy(cb: () => void): () => void {
   const handler = () => cb();
   window.addEventListener(EV.PRIVACY_POLICY, handler);
   return () => window.removeEventListener(EV.PRIVACY_POLICY, handler);
+}
+
+// ── Ad preferences (Phaser → React) ─────────────────────────────────────────
+
+/** SettingsScene → React: re-show the AdConsentModal so the user can change
+ *  their personalized / non-personalized ad preference. */
+export function emitAdPreferences(): void {
+  window.dispatchEvent(new CustomEvent(EV.AD_PREFERENCES));
+}
+
+export function onAdPreferences(cb: () => void): () => void {
+  const handler = () => cb();
+  window.addEventListener(EV.AD_PREFERENCES, handler);
+  return () => window.removeEventListener(EV.AD_PREFERENCES, handler);
+}
+
+// ── About screen (Phaser → React) ────────────────────────────────────────────
+
+/** SettingsScene → React: navigate to the About & Terms screen. */
+export function emitAbout(): void {
+  window.dispatchEvent(new CustomEvent(EV.ABOUT));
+}
+
+export function onAbout(cb: () => void): () => void {
+  const handler = () => cb();
+  window.addEventListener(EV.ABOUT, handler);
+  return () => window.removeEventListener(EV.ABOUT, handler);
 }

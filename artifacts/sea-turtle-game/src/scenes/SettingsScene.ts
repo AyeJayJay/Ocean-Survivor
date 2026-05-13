@@ -4,7 +4,7 @@
 
 import Phaser from "phaser";
 import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
-import { emitSceneChange, emitPrivacyPolicy } from "../game/EventBus";
+import { emitSceneChange, emitPrivacyPolicy, emitAdPreferences, emitAbout } from "../game/EventBus";
 import { soundManager } from "../audio/SoundManager";
 import { saveManager } from "../save/SaveManager";
 
@@ -81,18 +81,17 @@ export class SettingsScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(10);
     });
 
-    // ── Privacy placeholder ───────────────────────────────────────────────────
+    // ── Privacy section ───────────────────────────────────────────────────────
 
-    this.sectionLabel(cx, panelY + 400, "PRIVACY");
+    this.sectionLabel(cx, panelY + 400, "PRIVACY & DATA");
 
     const privacyText = [
-      "This game stores your progress locally on your device.",
-      "No personal data is collected or transmitted.",
-      "Ad networks may use device identifiers.",
+      "Progress saved on your device only — no account needed.",
+      "Ads may use device identifiers. Change anytime below.",
     ];
 
     privacyText.forEach((line, i) => {
-      this.add.text(cx, panelY + 440 + i * 22, line, {
+      this.add.text(cx, panelY + 438 + i * 22, line, {
         fontSize: "11px", fontFamily: "Arial, sans-serif",
         color: "rgba(120,160,200,0.55)",
         align: "center",
@@ -100,11 +99,26 @@ export class SettingsScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(10);
     });
 
+    // ── Ad preferences button ─────────────────────────────────────────────────
+
+    const consentBtn = this.add.text(cx, panelY + 496, "🎯  Manage Ad Preferences", {
+      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      color: "#4090b0",
+      align: "center",
+    }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
+
+    consentBtn.on("pointerdown", () => {
+      soundManager.playTap();
+      emitAdPreferences();
+    });
+    consentBtn.on("pointerover", () => consentBtn.setStyle({ color: "#60c0d8" }));
+    consentBtn.on("pointerout",  () => consentBtn.setStyle({ color: "#4090b0" }));
+
     // ── Privacy Policy link ───────────────────────────────────────────────────
 
-    const privacyBtn = this.add.text(cx, panelY + 510, "📋  Privacy Policy", {
-      fontSize: "13px", fontFamily: "Arial, sans-serif",
-      color: "#4080a0",
+    const privacyBtn = this.add.text(cx, panelY + 534, "📋  Privacy Policy", {
+      fontSize: "12px", fontFamily: "Arial, sans-serif",
+      color: "#3a7090",
       align: "center",
     }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
 
@@ -112,23 +126,23 @@ export class SettingsScene extends Phaser.Scene {
       soundManager.playTap();
       emitPrivacyPolicy();
     });
-    privacyBtn.on("pointerover", () => privacyBtn.setStyle({ color: "#60b0d0" }));
-    privacyBtn.on("pointerout",  () => privacyBtn.setStyle({ color: "#4080a0" }));
+    privacyBtn.on("pointerover", () => privacyBtn.setStyle({ color: "#50a0c0" }));
+    privacyBtn.on("pointerout",  () => privacyBtn.setStyle({ color: "#3a7090" }));
 
-    // ── Ad consent placeholder ────────────────────────────────────────────────
+    // ── About & Terms link ────────────────────────────────────────────────────
 
-    const consentBtn = this.add.text(cx, panelY + 548, "Manage Ad Preferences", {
+    const aboutBtn = this.add.text(cx, panelY + 566, "ℹ️  About & Terms", {
       fontSize: "12px", fontFamily: "Arial, sans-serif",
-      color: "#406080",
+      color: "#3a7090",
       align: "center",
     }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
 
-    consentBtn.on("pointerdown", () => {
+    aboutBtn.on("pointerdown", () => {
       soundManager.playTap();
-      this.showToast("Ad preferences (coming soon)");
+      emitAbout();
     });
-    consentBtn.on("pointerover", () => consentBtn.setStyle({ color: "#6090b0" }));
-    consentBtn.on("pointerout",  () => consentBtn.setStyle({ color: "#406080" }));
+    aboutBtn.on("pointerover", () => aboutBtn.setStyle({ color: "#50a0c0" }));
+    aboutBtn.on("pointerout",  () => aboutBtn.setStyle({ color: "#3a7090" }));
 
     // ── Back button ──────────────────────────────────────────────────────────
 
