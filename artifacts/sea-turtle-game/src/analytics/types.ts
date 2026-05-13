@@ -26,5 +26,7 @@ export type AnalyticsEventType =
   | "rewarded_started"
   | "rewarded_skipped"
   | "rewarded_completed"
+  | "rewarded_game_over_preroll_shown"
+  | "rewarded_game_over_completed"
   | "banner_impression"
   | "interstitial_cta_click";

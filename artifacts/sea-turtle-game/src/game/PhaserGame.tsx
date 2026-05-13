@@ -5,6 +5,9 @@ import { PreloadScene } from "../scenes/PreloadScene";
 import { MainMenuScene } from "../scenes/MainMenuScene";
 import { GameScene } from "../scenes/GameScene";
 import { GameOverScene } from "../scenes/GameOverScene";
+import { SkinSelectScene } from "../scenes/SkinSelectScene";
+import { SettingsScene } from "../scenes/SettingsScene";
+import { AchievementScene } from "../scenes/AchievementScene";
 import { GAME_WIDTH, GAME_HEIGHT } from "./GameConfig";
 
 /*
@@ -38,22 +41,28 @@ export function createPhaserGame(container: HTMLElement): Phaser.Game {
     physics: {
       default: "arcade",
       arcade: {
-        gravity: { x: 0, y: 0 }, // player sets its own gravity per-body
+        gravity: { x: 0, y: 0 },
         debug: false,
       },
     },
     scale: {
-      // FIT mode: Phaser's Scale Manager owns responsive scaling.
-      // The React container (480×854) matches game dimensions so the canvas
-      // renders at 1:1; the outer React transform handles viewport scaling.
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
     },
-    scene: [BootScene, PreloadScene, MainMenuScene, GameScene, GameOverScene],
+    scene: [
+      BootScene,
+      PreloadScene,
+      MainMenuScene,
+      GameScene,
+      GameOverScene,
+      SkinSelectScene,
+      SettingsScene,
+      AchievementScene,
+    ],
     input: {
-      activePointers: 3, // multi-touch support
+      activePointers: 3,
     },
     render: {
       antialias: true,
@@ -61,13 +70,11 @@ export function createPhaserGame(container: HTMLElement): Phaser.Game {
       roundPixels: false,
     },
     disableContextMenu: true,
-    // Transparent: false keeps the dark bg even before first draw
     transparent: false,
   };
 
   _game = new Phaser.Game(config);
 
-  // Lock to portrait via Screen Orientation API (best-effort; no-op in unsupported browsers)
   try {
     (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> })
       .lock?.("portrait-primary")
@@ -100,5 +107,5 @@ export default function PhaserGame({ containerRef }: Props) {
     };
   }, [containerRef]);
 
-  return null; // renders into containerRef, not here
+  return null;
 }

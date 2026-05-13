@@ -14,8 +14,6 @@ import {
   SHELL_INTERVAL_MS,
   PLAYER_RADIUS,
 } from "../game/GameConfig";
-import { soundManager } from "../audio/SoundManager";
-
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 interface ObstaclePair {
@@ -172,7 +170,7 @@ export class ObstacleManager {
     return count;
   }
 
-  /** Returns true if player collected a shell, plays sound. */
+  /** Returns true if player collected a shell (caller handles sound). */
   checkShellCollision(px: number, py: number): boolean {
     let collected = false;
     for (const sh of this.shells) {
@@ -183,11 +181,42 @@ export class ObstacleManager {
       if (dist < PLAYER_RADIUS + SHELL_RADIUS - 4) {
         sh.collected = true;
         this._shellsCollected++;
-        soundManager.playCollect();
         collected = true;
       }
     }
     return collected;
+  }
+
+  /**
+   * Returns true if the player circle is close to (but not colliding with)
+   * any obstacle pillar edge — used for near-miss detection.
+   *
+   * @param px player x
+   * @param py player y
+   * @param playerR player collision radius
+   * @param threshold extra px beyond playerR to consider "near"
+   */
+  isNearMiss(px: number, py: number, playerR: number, threshold: number): boolean {
+    const nearR = playerR + threshold;
+    for (const obs of this.obstacles) {
+      // Only check obstacles near the player horizontally
+      const rightEdge = obs.x + OBSTACLE_WIDTH;
+      if (px + nearR < obs.x || px - nearR > rightEdge) continue;
+      if (px + playerR > obs.x + 4 && px - playerR < rightEdge - 4) continue; // would collide
+
+      // Check if vertically close to the gap edges
+      const topEdge = obs.gapY;
+      const botEdge = obs.gapY + obs.gap;
+
+      // Player must be inside the gap (not colliding)
+      if (py - playerR < topEdge || py + playerR > botEdge) continue;
+
+      // Near top pillar edge
+      if (Math.abs(py - playerR - topEdge) < threshold) return true;
+      // Near bottom pillar edge
+      if (Math.abs(botEdge - (py + playerR)) < threshold) return true;
+    }
+    return false;
   }
 
   destroy(): void {

@@ -2,13 +2,18 @@
  * SaveManager — versioned localStorage persistence
  *
  * Single source of truth for all player progress:
- *   high score, lifetime shells, games played, unlocked skins, selected skin.
- *
- * Schema is versioned. If a newer save is detected the defaults are used and
- * the old high-score key (os_high_score) is migrated automatically.
+ *   high score, lifetime shells, games played, unlocked skins, selected skin,
+ *   completed achievements, daily challenge state.
  */
 
 export type SkinId = "baby" | "green_sea" | "glowing" | "golden" | "cyber" | "coral";
+
+export interface DailyChallengeState {
+  date: string;       // ISO date "YYYY-MM-DD"
+  challengeId: string;
+  completed: boolean;
+  progress: number;   // current progress toward goal
+}
 
 export interface SaveData {
   version: number;
@@ -18,11 +23,18 @@ export interface SaveData {
   unlockedSkins: SkinId[];
   selectedSkin: SkinId;
   hasReachedRestorationMilestone: boolean;
+  completedAchievements: string[];  // achievement IDs
+  achievementProgress: Record<string, number>; // achievement ID → numeric progress
+  dailyChallenge: DailyChallengeState | null;
+  musicMuted: boolean;
+  sfxMuted: boolean;
+  bestRunShells: number; // max shells collected in a single run
 }
 
-const SAVE_KEY = "os_save_v1";
+const SAVE_KEY = "os_save_v2";
+const LEGACY_V1_KEY = "os_save_v1";
 const LEGACY_HS_KEY = "os_high_score";
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 const DEFAULT_SAVE: SaveData = {
   version: CURRENT_VERSION,
@@ -32,6 +44,12 @@ const DEFAULT_SAVE: SaveData = {
   unlockedSkins: ["baby"],
   selectedSkin: "baby",
   hasReachedRestorationMilestone: false,
+  completedAchievements: [],
+  achievementProgress: {},
+  dailyChallenge: null,
+  musicMuted: false,
+  sfxMuted: false,
+  bestRunShells: 0,
 };
 
 class SaveManager {
@@ -46,21 +64,33 @@ class SaveManager {
   private load(): SaveData {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) {
-        // Migrate from legacy key if present
-        const legacy = parseInt(localStorage.getItem(LEGACY_HS_KEY) ?? "0", 10);
-        const base = { ...DEFAULT_SAVE };
-        if (legacy > 0) base.highScore = legacy;
-        return base;
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<SaveData>;
+        if (parsed.version === CURRENT_VERSION) {
+          return { ...DEFAULT_SAVE, ...parsed };
+        }
       }
-      const parsed = JSON.parse(raw) as Partial<SaveData>;
-      if (parsed.version !== CURRENT_VERSION) {
-        const migrated = { ...DEFAULT_SAVE };
-        if (typeof parsed.highScore === "number") migrated.highScore = parsed.highScore;
-        return migrated;
+
+      // Migrate from v1
+      const v1Raw = localStorage.getItem(LEGACY_V1_KEY);
+      if (v1Raw) {
+        const v1 = JSON.parse(v1Raw) as Partial<SaveData>;
+        return {
+          ...DEFAULT_SAVE,
+          highScore: v1.highScore ?? 0,
+          lifetimeShells: v1.lifetimeShells ?? 0,
+          gamesPlayed: v1.gamesPlayed ?? 0,
+          unlockedSkins: (v1.unlockedSkins as SkinId[]) ?? ["baby"],
+          selectedSkin: (v1.selectedSkin as SkinId) ?? "baby",
+          hasReachedRestorationMilestone: v1.hasReachedRestorationMilestone ?? false,
+        };
       }
-      // Merge with defaults so new fields added in future versions always exist
-      return { ...DEFAULT_SAVE, ...parsed };
+
+      // Migrate from legacy hs key
+      const legacy = parseInt(localStorage.getItem(LEGACY_HS_KEY) ?? "0", 10);
+      const base = { ...DEFAULT_SAVE };
+      if (legacy > 0) base.highScore = legacy;
+      return base;
     } catch {
       return { ...DEFAULT_SAVE };
     }
@@ -84,18 +114,25 @@ class SaveManager {
   get hasReachedRestorationMilestone(): boolean {
     return this.data.hasReachedRestorationMilestone;
   }
+  get completedAchievements(): string[] { return [...this.data.completedAchievements]; }
+  get achievementProgress(): Record<string, number> { return { ...this.data.achievementProgress }; }
+  get dailyChallenge(): DailyChallengeState | null { return this.data.dailyChallenge; }
+  get musicMuted(): boolean { return this.data.musicMuted; }
+  get sfxMuted(): boolean { return this.data.sfxMuted; }
+  get bestRunShells(): number { return this.data.bestRunShells; }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
-  /** Call once at game-over with the final run results. */
   recordGameOver(score: number, sessionShells: number): void {
     if (score > this.data.highScore) this.data.highScore = score;
     this.data.lifetimeShells += sessionShells;
     this.data.gamesPlayed += 1;
+    if (sessionShells > this.data.bestRunShells) {
+      this.data.bestRunShells = sessionShells;
+    }
     this.commit();
   }
 
-  /** Call when the player reaches the restoration milestone during a run. */
   setRestorationMilestone(): void {
     if (!this.data.hasReachedRestorationMilestone) {
       this.data.hasReachedRestorationMilestone = true;
@@ -103,7 +140,6 @@ class SaveManager {
     }
   }
 
-  /** Permanently unlock a skin. No-op if already unlocked. */
   unlockSkin(id: SkinId): void {
     if (!this.data.unlockedSkins.includes(id)) {
       this.data.unlockedSkins.push(id);
@@ -111,7 +147,6 @@ class SaveManager {
     }
   }
 
-  /** Change the active skin (must be unlocked). */
   selectSkin(id: SkinId): void {
     if (this.data.unlockedSkins.includes(id)) {
       this.data.selectedSkin = id;
@@ -119,14 +154,35 @@ class SaveManager {
     }
   }
 
+  completeAchievement(id: string): boolean {
+    if (this.data.completedAchievements.includes(id)) return false;
+    this.data.completedAchievements.push(id);
+    this.commit();
+    return true;
+  }
+
+  setAchievementProgress(id: string, progress: number): void {
+    this.data.achievementProgress[id] = progress;
+    this.commit();
+  }
+
+  setDailyChallenge(state: DailyChallengeState): void {
+    this.data.dailyChallenge = state;
+    this.commit();
+  }
+
+  setMusicMuted(muted: boolean): void {
+    this.data.musicMuted = muted;
+    this.commit();
+  }
+
+  setSfxMuted(muted: boolean): void {
+    this.data.sfxMuted = muted;
+    this.commit();
+  }
+
   // ── Unlock evaluation ──────────────────────────────────────────────────────
 
-  /**
-   * Returns IDs of skins that are newly satisfied but not yet in unlockedSkins.
-   * Does NOT mutate state — call unlockSkin() for each result to commit them.
-   * Call this AFTER recordGameOver() so the thresholds are evaluated on
-   * up-to-date data.
-   */
   checkNewUnlocks(): SkinId[] {
     const already = new Set(this.data.unlockedSkins);
     const newly: SkinId[] = [];

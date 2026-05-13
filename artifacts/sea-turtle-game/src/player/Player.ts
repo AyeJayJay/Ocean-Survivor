@@ -58,7 +58,7 @@ export class Player {
     if (!this.alive) return;
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocityY(JUMP_VELOCITY);
-    soundManager.playBubble();
+    // Flap SFX is played by GameScene with per-skin variant via soundManager.playFlapForSkin()
   }
 
   kill(): void {

@@ -28,6 +28,9 @@ export const SPEED_RAMP        = 7;    // px/s² ramp (per second of play)
 export const OBSTACLE_SPACING  = 310;  // px between obstacle pairs (x-axis)
 export const SPAWN_MARGIN      = 120;  // min px from top/bottom edge for gapY center
 
+// ── Near-miss ─────────────────────────────────────────────────────────────────
+export const NEAR_MISS_THRESHOLD = 28; // px beyond player radius to trigger near-miss
+
 // ── Shells (collectibles) ─────────────────────────────────────────────────────
 export const SHELL_RADIUS      = 14;   // visual + collision radius
 export const SHELL_INTERVAL_MS = 5000; // ms between shell spawns
@@ -40,17 +43,23 @@ export const SCORE_DIST_DIVISOR = 15; // px per score point (~12.5 pts/s at star
 // Gap shrinks every GAP_SHRINK_INTERVAL obstacle pairs cleared
 export const GAP_SHRINK_INTERVAL = 1; // shrink every cleared pair
 
+// ── Score milestone popups ────────────────────────────────────────────────────
+export const SCORE_MILESTONES = [25, 50, 100, 150, 200, 300, 500, 750, 1000];
+
 // ── LocalStorage keys ─────────────────────────────────────────────────────────
 export const LS_HIGH_SCORE = "os_high_score"; // legacy key — SaveManager migrates from this
-export const LS_SAVE_KEY   = "os_save_v1";    // versioned save managed by SaveManager
+export const LS_SAVE_KEY   = "os_save_v2";    // versioned save managed by SaveManager
 
 // ── Scene keys ────────────────────────────────────────────────────────────────
 export const SCENE = {
-  BOOT:      "BootScene",
-  PRELOAD:   "PreloadScene",
-  MAIN_MENU: "MainMenuScene",
-  GAME:      "GameScene",
-  GAME_OVER: "GameOverScene",
+  BOOT:        "BootScene",
+  PRELOAD:     "PreloadScene",
+  MAIN_MENU:   "MainMenuScene",
+  GAME:        "GameScene",
+  GAME_OVER:   "GameOverScene",
+  SKIN_SELECT: "SkinSelectScene",
+  SETTINGS:    "SettingsScene",
+  ACHIEVEMENT: "AchievementScene",
 } as const;
 
 // ── Texture keys ──────────────────────────────────────────────────────────────

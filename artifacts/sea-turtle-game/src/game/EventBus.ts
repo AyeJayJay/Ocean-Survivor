@@ -23,8 +23,23 @@ export interface GameStatePayload {
   shellsThisRun: number;
 }
 
+export type SceneName =
+  | "MainMenu"
+  | "Game"
+  | "GameOver"
+  | "SkinSelect"
+  | "Settings"
+  | "Achievement";
+
 export interface ScenePayload {
-  scene: "MainMenu" | "Game" | "GameOver";
+  scene: SceneName;
+  from?: SceneName; // where did we come from (for back button)
+}
+
+export interface AchievementToastPayload {
+  id: string;
+  name: string;
+  icon: string;
 }
 
 // ── Command events (React → Phaser) ───────────────────────────────────────────
@@ -36,9 +51,11 @@ export interface ReviveCommandPayload {
 // ── Event name constants ───────────────────────────────────────────────────────
 
 const EV = {
-  GAME_STATE:   "os:game-state",   // Phaser → React
-  SCENE_CHANGE: "os:scene-change", // Phaser → React
-  COMMAND:      "os:command",      // React  → Phaser
+  GAME_STATE:         "os:game-state",        // Phaser → React
+  SCENE_CHANGE:       "os:scene-change",      // Phaser → React
+  COMMAND:            "os:command",           // React  → Phaser
+  ACHIEVEMENT_TOAST:  "os:achievement-toast", // Phaser → React
+  GAME_OVER_AD:       "os:game-over-ad",      // bidirectional (request + result)
 } as const;
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
@@ -59,6 +76,10 @@ export function emitRestartCommand(): void {
   window.dispatchEvent(new CustomEvent(EV.COMMAND, { detail: { type: "restart" } }));
 }
 
+export function emitAchievementToast(payload: AchievementToastPayload): void {
+  window.dispatchEvent(new CustomEvent(EV.ACHIEVEMENT_TOAST, { detail: payload }));
+}
+
 // ── Listen helpers (return cleanup function) ──────────────────────────────────
 
 export function onGameState(cb: (p: GameStatePayload) => void): () => void {
@@ -77,4 +98,30 @@ export function onCommand(cb: (detail: Record<string, unknown>) => void): () => 
   const handler = (e: Event) => cb((e as CustomEvent<Record<string, unknown>>).detail);
   window.addEventListener(EV.COMMAND, handler);
   return () => window.removeEventListener(EV.COMMAND, handler);
+}
+
+export function onAchievementToast(cb: (p: AchievementToastPayload) => void): () => void {
+  const handler = (e: Event) => cb((e as CustomEvent<AchievementToastPayload>).detail);
+  window.addEventListener(EV.ACHIEVEMENT_TOAST, handler);
+  return () => window.removeEventListener(EV.ACHIEVEMENT_TOAST, handler);
+}
+
+// ── Game-over rewarded ad (bidirectional) ─────────────────────────────────────
+
+export interface GameOverAdPayload { type: "request" | "result"; rewarded?: boolean; }
+
+/** GameOverScene → React: ask for a rewarded ad to unlock a free replay. */
+export function emitGameOverAdRequest(): void {
+  window.dispatchEvent(new CustomEvent(EV.GAME_OVER_AD, { detail: { type: "request" } }));
+}
+
+/** React → GameOverScene: notify whether the ad was completed. */
+export function emitGameOverAdResult(payload: { rewarded: boolean }): void {
+  window.dispatchEvent(new CustomEvent(EV.GAME_OVER_AD, { detail: { type: "result", ...payload } }));
+}
+
+export function onGameOverAd(cb: (p: GameOverAdPayload) => void): () => void {
+  const handler = (e: Event) => cb((e as CustomEvent<GameOverAdPayload>).detail);
+  window.addEventListener(EV.GAME_OVER_AD, handler);
+  return () => window.removeEventListener(EV.GAME_OVER_AD, handler);
 }

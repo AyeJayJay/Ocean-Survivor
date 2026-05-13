@@ -3,13 +3,17 @@ import {
   GAME_WIDTH, GAME_HEIGHT, PLAYER_X, INITIAL_SPEED, INITIAL_GAP,
   SPEED_RAMP, MAX_SPEED, GAP_SHRINK_RATE, MIN_GAP,
   SCORE_DIST_DIVISOR, SCENE,
+  PLAYER_RADIUS, NEAR_MISS_THRESHOLD, SCORE_MILESTONES,
 } from "../game/GameConfig";
 import { Player } from "../player/Player";
 import { ObstacleManager } from "../obstacles/ObstacleManager";
 import { ProgressionManager } from "../progression/ProgressionManager";
+import { achievementManager } from "../progression/AchievementManager";
+import { dailyChallengeManager } from "../progression/DailyChallengeManager";
 import { saveManager } from "../save/SaveManager";
 import type { SkinId } from "../save/SaveManager";
-import { emitGameState, emitSceneChange, onCommand } from "../game/EventBus";
+import { emitGameState, emitSceneChange, emitAchievementToast, onCommand } from "../game/EventBus";
+import { soundManager } from "../audio/SoundManager";
 import { analytics } from "../analytics/Analytics";
 
 // ── Local types ────────────────────────────────────────────────────────────────
@@ -25,34 +29,18 @@ interface Bubble {
   speed: number; alpha: number;
 }
 
-type GameState = "playing" | "dead";
+type GameState = "playing" | "paused" | "dead";
 
 /*
  * GameScene — the main gameplay loop.
  *
- * State machine:
- *   playing → (collision) → dead → (revive command) → playing
- *   playing → (collision) → dead → (restart command) → GameOverScene
- *
- * REVIVE / RESTART UX DESIGN
- * ──────────────────────────
- * When the turtle dies, GameScene enters the "dead" state but does NOT
- * immediately transition to GameOverScene. Instead, it emits a "dead" game-
- * state event; App.tsx surfaces an overlay 750 ms later with two choices:
- *
- *   1. "Watch Ad — Continue"  → RewardedAd plays → emitReviveCommand({revived:true})
- *                               → doRevive() restores turtle at death Y and resumes
- *
- *   2. "Restart"              → emitRestartCommand() → goToGameOver() fades
- *                               to GameOverScene, which shows final score + high score
- *
- * This "revive while still in-run" pattern (used by Subway Surfers, Temple Run
- * etc.) is intentionally chosen over showing the offer on GameOverScene: the
- * player can see the game world frozen at the moment of death, raising emotional
- * investment and ad conversion rate. The GameOverScene is purely a score summary
- * screen; the ad/revive lifecycle is entirely owned by GameScene + App.tsx.
- *
- * React shell (App.tsx) handles all ad UI; this scene communicates via EventBus.
+ * New in Task 3:
+ *  - Pause overlay (pause button, resume/settings/quit panel)
+ *  - Near-miss detection with screen edge flash + "So Close!" text
+ *  - Milestone score popups (25, 50, 100, …)
+ *  - Achievement evaluation + toast on game-over
+ *  - Daily challenge evaluation on game-over
+ *  - SoundManager SFX: jump, collect, death, near-miss, milestone
  */
 export class GameScene extends Phaser.Scene {
   // Game objects
@@ -71,17 +59,30 @@ export class GameScene extends Phaser.Scene {
   // HUD
   private scoreText!: Phaser.GameObjects.Text;
   private shellText!: Phaser.GameObjects.Text;
+  private pauseBtn!: Phaser.GameObjects.Text;
+
+  // Pause overlay
+  private pausePanel!: Phaser.GameObjects.Container;
+  private pauseOverlayGfx!: Phaser.GameObjects.Graphics;
+
+  // Near-miss
+  private nearMissGfx!: Phaser.GameObjects.Graphics;
+  private nearMissCooldown = 0;
+  private lastNearMissScore = -999;
 
   // State
   private gameState: GameState = "playing";
   private score = 0;
   private bestScore = 0;
-  private distanceTraveled = 0; // accumulated pixels (drives display score)
+  private distanceTraveled = 0;
   private reviveUsed = false;
   private deathY = GAME_HEIGHT / 2;
   private speed = INITIAL_SPEED;
   private gap = INITIAL_GAP;
   private sessionStartTime = 0;
+
+  // Score milestones
+  private milestonesHit = new Set<number>();
 
   constructor() { super(SCENE.GAME); }
 
@@ -99,13 +100,19 @@ export class GameScene extends Phaser.Scene {
     this.scrollX = 0;
     this.tick = 0;
     this.bubbles = [];
+    this.nearMissCooldown = 0;
+    this.lastNearMissScore = -999;
+    this.milestonesHit.clear();
 
     // Background (depth 0, 1)
     this.bgGfx = this.add.graphics().setDepth(0);
     this.fxGfx = this.add.graphics().setDepth(1);
     this.buildBgShapes();
 
-    // Progression manager (depth 2, 3 — above background, below obstacles)
+    // Near-miss edge flash (depth 49 — just below death flash)
+    this.nearMissGfx = this.add.graphics().setDepth(49);
+
+    // Progression manager (depth 2, 3)
     this.progressionManager = new ProgressionManager(this, () => {
       saveManager.setRestorationMilestone();
     });
@@ -128,12 +135,27 @@ export class GameScene extends Phaser.Scene {
       color: "#ffd84a", stroke: "#4a2800", strokeThickness: 2,
     }).setOrigin(1, 0).setDepth(30);
 
+    // Pause button (top-left, safe below banner ad)
+    this.pauseBtn = this.add.text(18, 52, "⏸", {
+      fontSize: "22px", fontFamily: "Arial, sans-serif",
+      color: "rgba(255,255,255,0.55)",
+    }).setOrigin(0, 0.5).setDepth(30).setInteractive({ useHandCursor: true });
+
+    this.pauseBtn.on("pointerdown", () => this.togglePause());
+    this.pauseBtn.on("pointerover", () => this.pauseBtn.setAlpha(1));
+    this.pauseBtn.on("pointerout",  () => this.pauseBtn.setAlpha(0.7));
+
+    // Build (hidden) pause panel
+    this.buildPausePanel();
+
     // Input
     this.input.on("pointerdown", this.handleInput, this);
     this.input.keyboard?.on("keydown-SPACE", this.handleInput, this);
+    this.input.keyboard?.on("keydown-ESC", () => {
+      if (this.gameState === "playing" || this.gameState === "paused") this.togglePause();
+    });
 
-    // Command listener from React (revive / restart).
-    // Cleanup is bound to the Phaser SHUTDOWN scene event.
+    // Command listener from React
     const removeCommandListener = onCommand((detail) => {
       if (detail.type === "revive") {
         if (detail.revived) this.doRevive();
@@ -142,6 +164,7 @@ export class GameScene extends Phaser.Scene {
         this.goToGameOver();
       }
     });
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       removeCommandListener();
       this.player?.destroy();
@@ -149,19 +172,22 @@ export class GameScene extends Phaser.Scene {
       this.progressionManager?.destroy();
     }, this);
 
-    // Notify React
     emitSceneChange({ scene: "Game" });
     this.emitState();
-
     analytics.track("game_start");
   }
 
   update(_time: number, delta: number): void {
     this.tick++;
     const dt = delta / 1000;
+
+    if (this.nearMissCooldown > 0) this.nearMissCooldown -= dt;
+
+    if (this.gameState === "paused") return;
+
     this.scrollX += this.speed * dt;
 
-    // Always update background regardless of game state
+    // Always update background
     this.updateBubbles(dt);
     this.drawBackground();
 
@@ -170,32 +196,38 @@ export class GameScene extends Phaser.Scene {
       this.speed = Math.min(this.speed + SPEED_RAMP * dt, MAX_SPEED);
       this.obstacleManager.setSpeed(this.speed);
 
-      // Progression — ticks elapsed time and updates visual layers
+      // Progression
       this.progressionManager.update(dt, this.scrollX);
 
       // Update gameplay objects
       this.player.update();
       this.obstacleManager.update(delta);
 
-      // Score — distance-based, increments in real time as turtle swims
+      // Score
       this.distanceTraveled += this.speed * dt;
       const newScore = Math.floor(this.distanceTraveled / SCORE_DIST_DIVISOR);
       if (newScore > this.score) {
         this.score = newScore;
         this.scoreText.setText(this.score.toString());
+        this.checkScoreMilestone(newScore);
       }
 
-      // Difficulty ramp — gap shrinks each time an obstacle pair is cleared
+      // Gap shrink
       const newlyPassed = this.obstacleManager.countNewlyScored(this.player.x);
       if (newlyPassed > 0) {
         this.gap = Math.max(this.gap - GAP_SHRINK_RATE * newlyPassed, MIN_GAP);
         this.obstacleManager.setGap(this.gap);
       }
 
-      // Shells — collect and persist to SaveManager
+      // Shells
       if (this.obstacleManager.checkShellCollision(this.player.x, this.player.y)) {
+        soundManager.playCollect();
         this.shellText.setText(`🐚 ${this.obstacleManager.shellsCollected}`);
+        this.spawnScorePopup(1);
       }
+
+      // Near-miss check
+      this.checkNearMiss();
 
       // Collision / out of bounds
       const hitObstacle = this.obstacleManager.checkObstacleCollision(this.player.x, this.player.y);
@@ -204,7 +236,7 @@ export class GameScene extends Phaser.Scene {
         this.onPlayerDeath();
       }
     } else {
-      // Dead state: still animate the player (death flicker)
+      // Dead state: still animate (death flicker)
       this.player.update();
     }
   }
@@ -214,8 +246,199 @@ export class GameScene extends Phaser.Scene {
   private handleInput(): void {
     if (this.gameState === "playing") {
       this.player.jump();
+      soundManager.playFlapForSkin(saveManager.selectedSkin);
     }
-    // Dead state taps are handled by React overlay buttons
+  }
+
+  // ── Pause ────────────────────────────────────────────────────────────────────
+
+  private togglePause(): void {
+    if (this.gameState === "dead") return;
+    if (this.gameState === "playing") {
+      this.gameState = "paused";
+      soundManager.playTap();
+      this.pauseBtn.setText("▶");
+      this.pausePanel.setVisible(true);
+      this.pauseOverlayGfx.setVisible(true);
+      this.physics.pause();
+    } else if (this.gameState === "paused") {
+      this.gameState = "playing";
+      soundManager.playTap();
+      this.pauseBtn.setText("⏸");
+      this.pausePanel.setVisible(false);
+      this.pauseOverlayGfx.setVisible(false);
+      this.physics.resume();
+    }
+  }
+
+  private buildPausePanel(): void {
+    const cx = GAME_WIDTH / 2;
+    const cy = GAME_HEIGHT / 2;
+
+    this.pauseOverlayGfx = this.add.graphics().setDepth(60);
+    this.pauseOverlayGfx.fillStyle(0x000000, 0.55);
+    this.pauseOverlayGfx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.pauseOverlayGfx.setVisible(false);
+
+    const panelW = 300;
+    const panelH = 240;
+
+    const panelBg = this.add.graphics();
+    panelBg.fillStyle(0x021020, 0.96);
+    panelBg.fillRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 16);
+    panelBg.lineStyle(1.5, 0x204060, 0.8);
+    panelBg.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 16);
+
+    const title = this.add.text(0, -panelH / 2 + 36, "PAUSED", {
+      fontSize: "24px", fontFamily: "Arial Black, sans-serif",
+      color: "#80c8ff", stroke: "#001828", strokeThickness: 4,
+    }).setOrigin(0.5);
+
+    const resumeBtn = this.makeMenuBtn(0, -30, "▶  RESUME", "#1a6e40", "#ffffff", () => {
+      this.togglePause();
+    });
+
+    const settingsBtn = this.makeMenuBtn(0, 30, "⚙  SETTINGS", "#102840", "#c0d8ff", () => {
+      soundManager.playTap();
+      // Pause this scene (keeps state + visuals) and launch Settings on top.
+      // SettingsScene will resume us on Back when from === SCENE.GAME.
+      this.scene.pause();
+      this.scene.launch(SCENE.SETTINGS, { from: SCENE.GAME });
+    });
+
+    const quitBtn = this.makeMenuBtn(0, 90, "⌂  QUIT TO MENU", "#0a1428", "#a0b8d8", () => {
+      soundManager.playTap();
+      this.cameras.main.fade(220, 0, 0, 0, false, (_: unknown, p: number) => {
+        if (p >= 1) this.scene.start(SCENE.MAIN_MENU);
+      });
+    });
+
+    this.pausePanel = this.add.container(cx, cy, [panelBg, title, resumeBtn, settingsBtn, quitBtn]);
+    this.pausePanel.setDepth(61);
+    this.pausePanel.setVisible(false);
+  }
+
+  private makeMenuBtn(
+    x: number, y: number,
+    label: string,
+    bg: string,
+    color: string,
+    onClick: () => void
+  ): Phaser.GameObjects.Text {
+    const btn = this.add.text(x, y, label, {
+      fontSize: "15px", fontFamily: "Arial, sans-serif",
+      color, backgroundColor: bg,
+      padding: { x: 20, y: 10 },
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    btn.on("pointerdown", onClick);
+    btn.on("pointerover", () => btn.setAlpha(0.8));
+    btn.on("pointerout",  () => btn.setAlpha(1));
+    return btn;
+  }
+
+  // ── Near-miss ────────────────────────────────────────────────────────────────
+
+  private checkNearMiss(): void {
+    if (this.nearMissCooldown > 0) return;
+    if (this.score - this.lastNearMissScore < 3) return; // prevent duplicate in same area
+
+    const nearMiss = this.obstacleManager.isNearMiss(
+      this.player.x, this.player.y,
+      PLAYER_RADIUS, NEAR_MISS_THRESHOLD
+    );
+
+    if (nearMiss) {
+      this.nearMissCooldown = 1.5; // 1.5s cooldown
+      this.lastNearMissScore = this.score;
+      soundManager.playNearMiss();
+      this.showNearMissEffect();
+    }
+  }
+
+  private showNearMissEffect(): void {
+    // Edge flash
+    const g = this.nearMissGfx;
+    g.clear();
+    g.lineStyle(10, 0xffff00, 0.6);
+    g.strokeRect(5, 5, GAME_WIDTH - 10, GAME_HEIGHT - 10);
+
+    this.tweens.add({
+      targets: g, alpha: 0, duration: 500,
+      onComplete: () => { g.setAlpha(1); g.clear(); },
+    });
+
+    // "So Close!" text
+    const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.35, "So Close!", {
+      fontSize: "22px", fontFamily: "Arial Black, sans-serif",
+      color: "#ffff60", stroke: "#4a4a00", strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(48).setAlpha(0);
+
+    this.tweens.add({
+      targets: txt,
+      alpha: { from: 0, to: 1 },
+      y: { from: GAME_HEIGHT * 0.35, to: GAME_HEIGHT * 0.32 },
+      duration: 180,
+      onComplete: () => {
+        this.tweens.add({
+          targets: txt, alpha: 0, y: GAME_HEIGHT * 0.28,
+          duration: 600, delay: 400,
+          onComplete: () => txt.destroy(),
+        });
+      },
+    });
+  }
+
+  // ── Score milestone popups ────────────────────────────────────────────────────
+
+  private checkScoreMilestone(score: number): void {
+    for (const milestone of SCORE_MILESTONES) {
+      if (score >= milestone && !this.milestonesHit.has(milestone)) {
+        this.milestonesHit.add(milestone);
+        this.spawnMilestonePopup(milestone);
+        soundManager.playMilestone();
+      }
+    }
+  }
+
+  private spawnMilestonePopup(milestone: number): void {
+    const x = GAME_WIDTH / 2;
+    const y = GAME_HEIGHT * 0.22;
+
+    const txt = this.add.text(x, y, `${milestone}!`, {
+      fontSize: "30px", fontFamily: "Arial Black, sans-serif",
+      color: "#ffd84a", stroke: "#4a2800", strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(45).setAlpha(0).setScale(0.6);
+
+    this.tweens.add({
+      targets: txt,
+      alpha: 1, scale: 1.1,
+      duration: 200, ease: "Back.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: txt, alpha: 0, scale: 1.3, y: y - 40,
+          duration: 700, delay: 350, ease: "Power2",
+          onComplete: () => txt.destroy(),
+        });
+      },
+    });
+  }
+
+  // ── Score popup (per-shell) ────────────────────────────────────────────────────
+
+  private spawnScorePopup(count: number): void {
+    const x = PLAYER_X + 55;
+    const y = this.player.y - 20;
+    const txt = this.add.text(x, y, count > 1 ? `+${count}` : "+1", {
+      fontSize: "18px", fontFamily: "Arial, sans-serif",
+      color: "#ffffff", stroke: "#000000", strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(40);
+
+    this.tweens.add({
+      targets: txt, y: y - 55, alpha: 0,
+      duration: 800, ease: "Power2",
+      onComplete: () => txt.destroy(),
+    });
   }
 
   // ── Death / Revive ───────────────────────────────────────────────────────────
@@ -224,17 +447,13 @@ export class GameScene extends Phaser.Scene {
     if (this.gameState !== "playing") return;
     this.gameState = "dead";
 
-    // Record death Y for revive
     this.deathY = this.player.y;
-
-    // Kill physics momentum
     this.player.kill();
+    soundManager.playDeath();
 
-    // Freeze obstacle scrolling
     this.speed = 0;
     this.obstacleManager.setSpeed(0);
 
-    // Death screen flash
     const flash = this.add.graphics().setDepth(50);
     flash.fillStyle(0xff4040, 0.3);
     flash.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -243,7 +462,6 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => flash.destroy(),
     });
 
-    // Notify React so it can show rewarded ad offer after 750ms
     this.emitState();
   }
 
@@ -252,15 +470,11 @@ export class GameScene extends Phaser.Scene {
     this.reviveUsed = true;
     this.gameState = "playing";
 
-    // Resume scrolling with slight slowdown as a grace period
     this.speed = INITIAL_SPEED;
     this.obstacleManager.setSpeed(this.speed);
-
-    // Restore player at death position
     this.player.revive(this.deathY);
 
     analytics.track("game_revived", { score: this.score });
-
     this.emitState();
   }
 
@@ -275,17 +489,30 @@ export class GameScene extends Phaser.Scene {
       duration_s: sessionDuration,
     });
 
-    // Persist game results — must happen before checkNewUnlocks()
+    // Persist results first
     saveManager.recordGameOver(this.score, sessionShells);
-
-    // Update local bestScore from SaveManager (it handles new-record logic)
     this.bestScore = saveManager.highScore;
 
-    // Check and commit newly unlocked skins
+    // Unlock skins
     const newlyUnlocked = saveManager.checkNewUnlocks();
     for (const id of newlyUnlocked) {
       saveManager.unlockSkin(id);
     }
+
+    // Evaluate achievements
+    const newAchievements = achievementManager.evaluate();
+    for (const ach of newAchievements) {
+      emitAchievementToast({ id: ach.id, name: ach.name, icon: ach.icon });
+      soundManager.playAchievement();
+    }
+
+    // Evaluate daily challenge
+    dailyChallengeManager.evaluateRun({
+      score: this.score,
+      shellsCollected: sessionShells,
+      survived: true,
+      restorationReached: this.progressionManager?.reachedMilestone ?? false,
+    });
 
     const newRecord = this.score > 0 && this.score === this.bestScore;
 
@@ -303,28 +530,11 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  // ── Score popup ───────────────────────────────────────────────────────────────
-
-  private spawnScorePopup(count: number): void {
-    const x = PLAYER_X + 55;
-    const y = this.player.y - 20;
-    const txt = this.add.text(x, y, count > 1 ? `+${count}` : "+1", {
-      fontSize: "18px", fontFamily: "Arial, sans-serif",
-      color: "#ffffff", stroke: "#000000", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(40);
-
-    this.tweens.add({
-      targets: txt, y: y - 55, alpha: 0,
-      duration: 800, ease: "Power2",
-      onComplete: () => txt.destroy(),
-    });
-  }
-
   // ── EventBus ──────────────────────────────────────────────────────────────────
 
   private emitState(): void {
     emitGameState({
-      state: this.gameState === "playing" ? "playing" : "dead",
+      state: this.gameState === "playing" ? "playing" : (this.gameState === "paused" ? "playing" : "dead"),
       score: this.score,
       bestScore: this.bestScore,
       reviveAvailable: !this.reviveUsed,
@@ -354,9 +564,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateBubbles(dt: number): void {
-    // Bubble count scales with restoration stage
     const stage = this.progressionManager?.stage ?? 0;
-    const spawnRate = 5 + stage * 1.5; // more bubbles as ocean heals
+    const spawnRate = 5 + stage * 1.5;
     if (Math.random() < spawnRate * dt) {
       this.bubbles.push({
         x: Math.random() * GAME_WIDTH, y: GAME_HEIGHT + 5,
@@ -374,15 +583,9 @@ export class GameScene extends Phaser.Scene {
     const g = this.bgGfx;
     g.clear();
 
-    // Blend from dark polluted ocean → bright restored ocean based on stage
     const bf = this.progressionManager?.brightnessFactor ?? 0;
-
-    // Dark palette (polluted): deep dark blue-black
-    // Bright palette (restored): medium ocean blue-teal
-    const topDark   = 0x010609;
-    const botDark   = 0x041828;
-    const topBright = 0x042848;
-    const botBright = 0x0a4060;
+    const topDark   = 0x010609; const botDark   = 0x041828;
+    const topBright = 0x042848; const botBright = 0x0a4060;
 
     const topColor = Phaser.Display.Color.Interpolate.ColorWithColor(
       Phaser.Display.Color.IntegerToColor(topDark),
@@ -397,30 +600,24 @@ export class GameScene extends Phaser.Scene {
 
     const topInt = Phaser.Display.Color.GetColor(topColor.r, topColor.g, topColor.b);
     const botInt = Phaser.Display.Color.GetColor(botColor.r, botColor.g, botColor.b);
-
     g.fillGradientStyle(topInt, topInt, botInt, botInt, 1, 1, 1, 1);
     g.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-    // Light shafts at higher restoration stages
     if (bf > 0.3) {
       const shaftAlpha = (bf - 0.3) * 0.06;
       g.fillStyle(0x40d0ff, shaftAlpha);
       for (let i = 0; i < 5; i++) {
         const sx = (i * 120 - (this.scrollX * 0.04) % 600 + 600) % 600;
         g.beginPath();
-        g.moveTo(sx - 20, 0);
-        g.lineTo(sx + 20, 0);
-        g.lineTo(sx + 60, GAME_HEIGHT);
-        g.lineTo(sx + 20, GAME_HEIGHT);
-        g.closePath();
-        g.fillPath();
+        g.moveTo(sx - 20, 0); g.lineTo(sx + 20, 0);
+        g.lineTo(sx + 60, GAME_HEIGHT); g.lineTo(sx + 20, GAME_HEIGHT);
+        g.closePath(); g.fillPath();
       }
     }
 
     const fx = this.fxGfx;
     fx.clear();
 
-    // Parallax shapes (silhouette seabed shapes)
     for (const shape of this.bgShapes) {
       const ratio = shape.layer === 0 ? 0.12 : 0.28;
       const offset = this.scrollX * ratio;
@@ -430,7 +627,6 @@ export class GameScene extends Phaser.Scene {
         const dx = baseX + rep * GAME_WIDTH - GAME_WIDTH;
         if (dx + shape.w < 0 || dx > GAME_WIDTH) continue;
 
-        // Shapes brighten slightly at higher stages
         const colDark   = shape.layer === 0 ? 0x020e1c : 0x031526;
         const colBright = shape.layer === 0 ? 0x083858 : 0x0c4a70;
         const col = Phaser.Display.Color.Interpolate.ColorWithColor(
@@ -449,7 +645,6 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Bubbles
     const bubbleColor = bf > 0.5 ? 0xa0eeff : 0x80d0ff;
     for (const b of this.bubbles) {
       fx.lineStyle(1.2, bubbleColor, b.alpha);

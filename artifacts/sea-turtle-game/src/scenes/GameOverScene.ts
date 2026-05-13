@@ -1,8 +1,9 @@
 import Phaser from "phaser";
 import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
-import { emitSceneChange, emitGameState } from "../game/EventBus";
+import { emitSceneChange, emitGameState, emitGameOverAdRequest, onGameOverAd } from "../game/EventBus";
 import { getSkinDef, SKIN_DEFS } from "../player/SkinDefs";
 import { saveManager } from "../save/SaveManager";
+import { soundManager } from "../audio/SoundManager";
 import type { SkinId } from "../save/SaveManager";
 
 interface GameOverData {
@@ -213,6 +214,7 @@ export class GameOverScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     playBtn.on("pointerdown", () => {
+      soundManager.playTap();
       this.cameras.main.fade(200, 0, 0, 0, false, (_: unknown, progress: number) => {
         if (progress >= 1) this.scene.start(SCENE.GAME);
       });
@@ -227,12 +229,52 @@ export class GameOverScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     menuBtn.on("pointerdown", () => {
+      soundManager.playTap();
       this.cameras.main.fade(220, 0, 0, 0, false, (_: unknown, progress: number) => {
         if (progress >= 1) this.scene.start(SCENE.MAIN_MENU);
       });
     });
     menuBtn.on("pointerover", () => menuBtn.setStyle({ color: "#80c8ff" }));
     menuBtn.on("pointerout",  () => menuBtn.setStyle({ color: "#c0d8ff" }));
+
+    // ── Rewarded ad offer ─────────────────────────────────────────────────────
+    // Offer the player a free continue via a rewarded ad.
+
+    const watchAdBtn = this.add.text(cx, btnY - 46, "❤️  Watch Ad — Free Continue", {
+      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      color: "#80d4ff", backgroundColor: "#0a2040",
+      padding: { x: 14, y: 9 },
+      stroke: "#041020", strokeThickness: 2,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    watchAdBtn.on("pointerover", () => watchAdBtn.setStyle({ color: "#c0eaff" }));
+    watchAdBtn.on("pointerout",  () => watchAdBtn.setStyle({ color: "#80d4ff" }));
+
+    watchAdBtn.on("pointerdown", () => {
+      soundManager.playTap();
+      watchAdBtn.setInteractive(false);
+      watchAdBtn.setAlpha(0.5);
+      emitGameOverAdRequest();
+    });
+
+    // Listen for ad result
+    const offAdResult = onGameOverAd((payload) => {
+      if (payload.type !== "result") return;
+      offAdResult(); // one-shot
+      if (payload.rewarded) {
+        // Rewarded: start a fresh run
+        this.cameras.main.fade(200, 0, 0, 0, false, (_: unknown, p: number) => {
+          if (p >= 1) this.scene.start(SCENE.GAME);
+        });
+      } else {
+        // Declined: re-enable button
+        watchAdBtn.setInteractive(true);
+        watchAdBtn.setAlpha(1);
+      }
+    });
+
+    // Clean up listener when scene shuts down
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => offAdResult());
 
     // Tell React this scene is active (triggers interstitial check in App.tsx)
     emitSceneChange({ scene: "GameOver" });
