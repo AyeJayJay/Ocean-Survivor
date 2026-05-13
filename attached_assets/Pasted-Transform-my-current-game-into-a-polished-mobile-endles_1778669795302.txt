@@ -1,0 +1,153 @@
+Transform my current game into a polished mobile endless survival game called “Ocean Survivor” centered around a baby sea turtle surviving a polluted ocean.
+
+IMPORTANT GOALS:
+- Mobile-first design
+- Easy future publishing to Apple App Store and Google Play
+- Optimized ad monetization
+- Fast, addictive gameplay loop similar to highly replayable arcade games
+- Clean architecture and maintainable code
+
+TECH STACK REQUIREMENTS:
+- Convert or structure the project using Phaser.js with Capacitor compatibility for easier mobile app packaging and publishing
+- Organize the codebase cleanly into:
+  - scenes
+  - player
+  - obstacles
+  - UI
+  - ads
+  - audio
+  - progression
+- Ensure the game is responsive across different mobile screen sizes and aspect ratios
+- Optimize performance for lower-end mobile devices
+- Prepare the project so it can later be exported to Android and iOS with minimal restructuring
+
+CORE GAMEPLAY:
+- Endless vertical survival gameplay
+- One-touch controls
+- Fast restart after death (under 1 second)
+- Increasing difficulty over time
+- Strong “just one more try” feeling
+- Smooth movement physics
+- Responsive controls designed for touchscreens
+
+THEME:
+The player is a baby sea turtle trying to survive in a polluted ocean.
+
+Replace generic obstacles with:
+- plastic bags
+- fishing nets
+- oil blobs
+- soda rings
+- jellyfish
+- sharks
+- fishing hooks
+- boats
+
+VISUAL STYLE:
+- Beautiful ocean atmosphere
+- Dynamic underwater lighting
+- Soft particle effects
+- Ocean parallax backgrounds
+- Relaxing but emotional aesthetic
+- Modern mobile game UI/UX
+- Smooth animations and transitions
+
+PROGRESSION SYSTEM:
+Create an environmental restoration progression system:
+- As the player survives longer, the ocean slowly becomes cleaner
+- Coral reefs restore visually
+- Water becomes brighter
+- Sea life returns gradually
+- Difficulty still increases while visuals improve
+
+SCORING:
+- Distance survived
+- Trash avoided
+- High score tracking
+- Persistent local save data
+
+SKIN SYSTEM:
+Create unlockable turtle skins including:
+- baby turtle
+- green sea turtle
+- glowing turtle
+- golden turtle
+- cyber turtle
+- coral turtle
+
+Unlock methods:
+- high scores
+- collected shells
+- achievement milestones
+
+MONETIZATION:
+Integrate a complete ad-ready system using Google AdMob.
+
+Include:
+1. Banner Ads
+- Only on menus and non-critical gameplay screens
+
+2. Interstitial Ads
+- Shown only after some deaths
+- Never every death
+- Include cooldown logic
+- Do not interrupt active gameplay
+
+3. Rewarded Ads
+- Offer one revive per run
+- Optional shell rewards
+- Clearly communicate rewards before ads
+
+AD SYSTEM REQUIREMENTS:
+- Use test ads during development
+- Structure code so production ad IDs can easily replace test IDs later
+- Preload ads before showing them
+- Handle ad failures gracefully
+- Never freeze gameplay during ad loading
+
+RETENTION FEATURES:
+- Near-miss feedback
+- “So close!” messages
+- Smooth score popups
+- Daily challenge system
+- Achievement system
+- Simple progression rewards
+- Satisfying sound effects
+
+AUDIO:
+- Calm ocean ambience
+- Satisfying movement sounds
+- Emotional music progression
+- Subtle UI sounds
+
+MENU SYSTEM:
+Create:
+- Main menu
+- Skin selection screen
+- Settings
+- Achievement screen
+- Pause menu
+- Game over screen
+
+MOBILE PUBLISHING PREP:
+Prepare the project for:
+- Google Play publishing
+- Apple App Store publishing
+- Proper app icons
+- Splash screen support
+- Mobile-safe UI areas
+- Performance optimization
+- Privacy policy integration placeholder
+- Ad consent placeholder
+- Analytics-ready structure
+
+CODE QUALITY:
+- Keep code modular and readable
+- Add comments explaining important systems
+- Avoid unnecessary complexity
+- Ensure stable gameplay loop
+- Prevent memory leaks
+- Optimize asset loading
+
+FINAL GOAL:
+The final game should feel like a polished, addictive, emotionally engaging mobile arcade game with strong replayability and clean monetization, while remaining lightweight and easy to publish to mobile app stores.
