@@ -34,7 +34,11 @@ export const SHELL_INTERVAL_MS = 5000; // ms between shell spawns
 export const SHELL_SPEED_RATIO = 0.85; // shells move slightly slower than obstacles
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
-export const SCORE_PER_OBSTACLE = 1;   // added when turtle clears a gap
+// Distance-based: score increments continuously as the turtle swims.
+// Every SCORE_DIST_DIVISOR pixels traveled = +1 point.
+export const SCORE_DIST_DIVISOR = 15; // px per score point (~12.5 pts/s at start)
+// Gap shrinks every GAP_SHRINK_INTERVAL obstacle pairs cleared
+export const GAP_SHRINK_INTERVAL = 1; // shrink every cleared pair
 
 // ── LocalStorage keys ─────────────────────────────────────────────────────────
 export const LS_HIGH_SCORE = "os_high_score";

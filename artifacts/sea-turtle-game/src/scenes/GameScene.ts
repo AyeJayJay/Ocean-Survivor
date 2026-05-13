@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import {
   GAME_WIDTH, GAME_HEIGHT, PLAYER_X, INITIAL_SPEED, INITIAL_GAP,
   SPEED_RAMP, MAX_SPEED, GAP_SHRINK_RATE, MIN_GAP,
-  LS_HIGH_SCORE, SCENE,
+  SCORE_DIST_DIVISOR, LS_HIGH_SCORE, SCENE,
 } from "../game/GameConfig";
 import { Player } from "../player/Player";
 import { ObstacleManager } from "../obstacles/ObstacleManager";
@@ -54,14 +54,12 @@ export class GameScene extends Phaser.Scene {
   private gameState: GameState = "playing";
   private score = 0;
   private bestScore = 0;
+  private distanceTraveled = 0; // accumulated pixels (drives display score)
   private reviveUsed = false;
   private deathY = GAME_HEIGHT / 2;
   private speed = INITIAL_SPEED;
   private gap = INITIAL_GAP;
   private sessionStartTime = 0;
-
-  // EventBus cleanup
-  private removeCommandListener!: () => void;
 
   constructor() { super(SCENE.GAME); }
 
@@ -70,6 +68,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.bestScore = parseInt(localStorage.getItem(LS_HIGH_SCORE) ?? "0", 10) || 0;
     this.score = 0;
+    this.distanceTraveled = 0;
     this.reviveUsed = false;
     this.speed = INITIAL_SPEED;
     this.gap = INITIAL_GAP;
@@ -106,8 +105,10 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointerdown", this.handleInput, this);
     this.input.keyboard?.on("keydown-SPACE", this.handleInput, this);
 
-    // Command listener from React (revive / restart)
-    this.removeCommandListener = onCommand((detail) => {
+    // Command listener from React (revive / restart).
+    // Cleanup is bound to the Phaser SHUTDOWN scene event so the window
+    // listener is always removed — even if shutdown() is never called manually.
+    const removeCommandListener = onCommand((detail) => {
       if (detail.type === "revive") {
         if (detail.revived) this.doRevive();
         else this.goToGameOver();
@@ -115,6 +116,11 @@ export class GameScene extends Phaser.Scene {
         this.goToGameOver();
       }
     });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      removeCommandListener();
+      this.player?.destroy();
+      this.obstacleManager?.destroy();
+    }, this);
 
     // Notify React
     emitSceneChange({ scene: "Game" });
@@ -141,14 +147,19 @@ export class GameScene extends Phaser.Scene {
       this.player.update();
       this.obstacleManager.update(delta);
 
-      // Score — obstacles cleared
-      const newlyScored = this.obstacleManager.countNewlyScored(this.player.x);
-      if (newlyScored > 0) {
-        this.score += newlyScored;
-        this.gap = Math.max(this.gap - GAP_SHRINK_RATE * newlyScored, MIN_GAP);
-        this.obstacleManager.setGap(this.gap);
+      // Score — distance-based, increments in real time as turtle swims
+      this.distanceTraveled += this.speed * dt;
+      const newScore = Math.floor(this.distanceTraveled / SCORE_DIST_DIVISOR);
+      if (newScore > this.score) {
+        this.score = newScore;
         this.scoreText.setText(this.score.toString());
-        this.spawnScorePopup(newlyScored);
+      }
+
+      // Difficulty ramp — gap shrinks each time an obstacle pair is cleared
+      const newlyPassed = this.obstacleManager.countNewlyScored(this.player.x);
+      if (newlyPassed > 0) {
+        this.gap = Math.max(this.gap - GAP_SHRINK_RATE * newlyPassed, MIN_GAP);
+        this.obstacleManager.setGap(this.gap);
       }
 
       // Shells
@@ -166,12 +177,6 @@ export class GameScene extends Phaser.Scene {
       // Dead state: still animate the player (death flicker)
       this.player.update();
     }
-  }
-
-  shutdown(): void {
-    this.removeCommandListener?.();
-    this.player?.destroy();
-    this.obstacleManager?.destroy();
   }
 
   // ── Input ────────────────────────────────────────────────────────────────────

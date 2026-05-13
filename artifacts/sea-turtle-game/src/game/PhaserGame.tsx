@@ -43,9 +43,11 @@ export function createPhaserGame(container: HTMLElement): Phaser.Game {
       },
     },
     scale: {
-      // Canvas fills the container exactly; the container is the one that scales
-      mode: Phaser.Scale.NONE,
-      autoCenter: Phaser.Scale.NO_CENTER,
+      // FIT mode: Phaser's Scale Manager owns responsive scaling.
+      // The React container (480×854) matches game dimensions so the canvas
+      // renders at 1:1; the outer React transform handles viewport scaling.
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
       width: GAME_WIDTH,
       height: GAME_HEIGHT,
     },
@@ -64,6 +66,14 @@ export function createPhaserGame(container: HTMLElement): Phaser.Game {
   };
 
   _game = new Phaser.Game(config);
+
+  // Lock to portrait via Screen Orientation API (best-effort; no-op in unsupported browsers)
+  try {
+    (screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> })
+      .lock?.("portrait-primary")
+      ?.catch(() => { /* silently ignore */ });
+  } catch (_) { /* silently ignore */ }
+
   return _game;
 }
 
