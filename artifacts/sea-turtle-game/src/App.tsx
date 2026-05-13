@@ -131,8 +131,9 @@ function GameShell() {
     const consent = saveManager.adConsentGiven;
     if (consent === null) {
       setShowAdConsent(true);
-    } else if (consent === true) {
-      AdmobBridge.initialize().catch(() => {});
+    } else {
+      // Initialize for both personalized (true) and basic/non-personalized (false)
+      AdmobBridge.initialize(consent === true).catch(() => {});
     }
   }, []);
 

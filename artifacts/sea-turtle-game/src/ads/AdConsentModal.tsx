@@ -39,14 +39,14 @@ export default function AdConsentModal({ onDone }: Props) {
   const handlePersonalized = async () => {
     saveManager.setAdConsent(true);
     analytics.track("ad_consent_accepted");
-    await AdmobBridge.initialize();
+    await AdmobBridge.initialize(true);
     safeClose();
   };
 
   const handleBasic = async () => {
     saveManager.setAdConsent(false);
     analytics.track("ad_consent_declined");
-    await AdmobBridge.initialize();
+    await AdmobBridge.initialize(false);
     safeClose();
   };
 

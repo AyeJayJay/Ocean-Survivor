@@ -23,9 +23,8 @@ const config: CapacitorConfig = {
       overlaysWebView: true,
     },
 
-    AdMob: {
-      initializeForTesting: true,
-    },
+    // AdMob — initializeForTesting is controlled by USE_TEST_ADS in AdConfig.ts
+    // Do not add initializeForTesting here; it would override the runtime flag.
   },
 
   android: {

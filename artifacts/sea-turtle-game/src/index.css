@@ -33,3 +33,13 @@ canvas {
   user-select: none;
   -webkit-user-select: none;
 }
+
+button, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  tap-highlight-color: transparent;
+}
+
+@keyframes adShimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}

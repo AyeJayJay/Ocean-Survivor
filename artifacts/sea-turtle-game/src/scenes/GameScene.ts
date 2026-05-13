@@ -72,6 +72,7 @@ export class GameScene extends Phaser.Scene {
 
   // State
   private gameState: GameState = "playing";
+  private transitioning = false; // guard against duplicate scene.start() on rapid restart/death
   private score = 0;
   private bestScore = 0;
   private distanceTraveled = 0;
@@ -157,6 +158,7 @@ export class GameScene extends Phaser.Scene {
 
     // Command listener from React
     const removeCommandListener = onCommand((detail) => {
+      if (this.transitioning) return; // ignore commands mid-transition
       if (detail.type === "revive") {
         if (detail.revived) this.doRevive();
         else this.goToGameOver();
@@ -167,9 +169,16 @@ export class GameScene extends Phaser.Scene {
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       removeCommandListener();
+      this.input.off("pointerdown", this.handleInput, this);
+      this.input.keyboard?.off("keydown-SPACE", this.handleInput, this);
+      this.input.keyboard?.off("keydown-ESC");
       this.player?.destroy();
       this.obstacleManager?.destroy();
       this.progressionManager?.destroy();
+      this.bgGfx?.destroy();
+      this.fxGfx?.destroy();
+      this.nearMissGfx?.destroy();
+      this.pauseOverlayGfx?.destroy();
     }, this);
 
     emitSceneChange({ scene: "Game" });
@@ -479,6 +488,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private goToGameOver(): void {
+    if (this.transitioning) return;
+    this.transitioning = true;
     const sessionShells = this.obstacleManager.shellsCollected;
     const sessionDuration = Math.round((Date.now() - this.sessionStartTime) / 1000);
 

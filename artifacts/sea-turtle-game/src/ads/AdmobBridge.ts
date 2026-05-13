@@ -7,6 +7,11 @@
  *
  * All public methods are async and never throw — callers handle null/false
  * returns by rendering their own fallback UI.
+ *
+ * Personalization:
+ *   Call initialize(personalized) with the user's consent choice.
+ *   When personalized=false, all ad requests include npa:"1" so AdMob
+ *   serves non-personalized ads and does not use the advertising identifier.
  */
 
 import { Capacitor } from "@capacitor/core";
@@ -27,6 +32,10 @@ type AdmobModule = typeof import("@capacitor-community/admob");
 let admobModule: AdmobModule | null = null;
 let initialized = false;
 
+// Whether the user consented to personalized ads.
+// false → npa:"1" is sent with every ad request (non-personalized mode).
+let isPersonalized = true;
+
 async function loadModule(): Promise<AdmobModule | null> {
   if (!Capacitor.isNativePlatform()) return null;
   if (!admobModule) {
@@ -38,6 +47,11 @@ async function loadModule(): Promise<AdmobModule | null> {
 async function getAdmob() {
   const mod = await loadModule();
   return mod ? mod.AdMob : null;
+}
+
+// NPA extras: included in every ad request when user chose non-personalized ads.
+function npaExtras(): Record<string, string> {
+  return isPersonalized ? {} : { npa: "1" };
 }
 
 // Tracks active listeners so we can remove them after use.
@@ -62,8 +76,18 @@ export const AdmobBridge = {
     return Capacitor.isNativePlatform();
   },
 
-  async initialize(): Promise<void> {
-    if (initialized) return;
+  /**
+   * Initialize AdMob. Must be called once after the user makes their
+   * consent choice. personalized=true means the user accepted targeted ads;
+   * personalized=false means non-personalized mode (npa:"1" on every request).
+   */
+  async initialize(personalized = true): Promise<void> {
+    if (initialized) {
+      // Allow updating personalization state even after init
+      isPersonalized = personalized;
+      return;
+    }
+    isPersonalized = personalized;
     const admob = await getAdmob();
     if (!admob) return;
     try {
@@ -78,12 +102,14 @@ export const AdmobBridge = {
     const admob = await getAdmob();
     if (!admob) return false;
     try {
+      // extras is a valid runtime field for NPA; cast because plugin types lag
       await admob.showBanner({
         adId: AD_CONFIG.banner.adId,
         adSize: BANNER_AD_SIZE_ADAPTIVE,
         position: BANNER_AD_POSITION_BOTTOM,
         margin: 0,
-      });
+        ...npaExtras(),
+      } as Parameters<typeof admob.showBanner>[0]);
       return true;
     } catch (e) {
       console.warn("[AdMob] showBanner failed:", e);
@@ -111,7 +137,10 @@ export const AdmobBridge = {
     const admob = await getAdmob();
     if (!admob) return false;
     try {
-      await admob.prepareInterstitial({ adId: AD_CONFIG.interstitial.adId });
+      await admob.prepareInterstitial({
+        adId: AD_CONFIG.interstitial.adId,
+        ...npaExtras(),
+      } as Parameters<typeof admob.prepareInterstitial>[0]);
       return true;
     } catch (e) {
       console.warn("[AdMob] prepareInterstitial failed:", e);
@@ -151,7 +180,10 @@ export const AdmobBridge = {
     const admob = await getAdmob();
     if (!admob) return false;
     try {
-      await admob.prepareRewardVideoAd({ adId: AD_CONFIG.rewarded.adId });
+      await admob.prepareRewardVideoAd({
+        adId: AD_CONFIG.rewarded.adId,
+        ...npaExtras(),
+      } as Parameters<typeof admob.prepareRewardVideoAd>[0]);
       return true;
     } catch (e) {
       console.warn("[AdMob] prepareRewarded failed:", e);

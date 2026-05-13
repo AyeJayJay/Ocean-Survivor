@@ -213,12 +213,21 @@ export class AchievementScene extends Phaser.Scene {
     });
 
     // Momentum on pointer up
-    this.events.on(Phaser.Scenes.Events.UPDATE, () => {
+    const onUpdate = () => {
       if (dragging || Math.abs(velocity) < 0.5) return;
       velocity *= 0.88;
       scrollY = clamp(scrollY + velocity);
       listContainer.y = MASK_TOP + LIST_PAD_TOP + scrollY;
       drawScrollbar(scrollY);
+    };
+    this.events.on(Phaser.Scenes.Events.UPDATE, onUpdate);
+
+    // Clean up all input and update listeners on scene shutdown
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.UPDATE, onUpdate);
+      this.input.off("pointerdown");
+      this.input.off("pointermove");
+      this.input.off("pointerup");
     });
 
     // ── Scroll hint (only when content overflows) ─────────────────────────────

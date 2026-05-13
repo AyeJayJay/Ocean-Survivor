@@ -27,10 +27,14 @@ const TEST_AD_UNITS = {
 } as const;
 
 const PRODUCTION_AD_UNITS = {
+  // ── Ad unit IDs ────────────────────────────────────────────────────────────
+  // Create these in the AdMob console → Apps → Ocean Survivor → Ad units
+  // One unit each of type: Banner, Interstitial, Rewarded Video
   banner:       "ca-app-pub-REPLACE_ME/REPLACE_ME_BANNER",
   interstitial: "ca-app-pub-REPLACE_ME/REPLACE_ME_INTERSTITIAL",
   rewarded:     "ca-app-pub-REPLACE_ME/REPLACE_ME_REWARDED",
-  appId:        "ca-app-pub-REPLACE_ME~REPLACE_ME_APP",
+  // ── App ID (set) ───────────────────────────────────────────────────────────
+  appId:        "ca-app-pub-1287355220585536~4125519824",
 } as const;
 
 export const AD_UNITS = USE_TEST_ADS ? TEST_AD_UNITS : PRODUCTION_AD_UNITS;
