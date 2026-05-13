@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Ocean Survivor brand colors -->
+    <color name="colorPrimary">#010C1A</color>
+    <color name="colorPrimaryDark">#010609</color>
+    <color name="colorAccent">#00E8FF</color>
+</resources>

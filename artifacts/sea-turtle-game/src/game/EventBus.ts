@@ -56,6 +56,7 @@ const EV = {
   COMMAND:            "os:command",           // React  → Phaser
   ACHIEVEMENT_TOAST:  "os:achievement-toast", // Phaser → React
   GAME_OVER_AD:       "os:game-over-ad",      // bidirectional (request + result)
+  PRIVACY_POLICY:     "os:privacy-policy",    // Phaser → React (open privacy overlay)
 } as const;
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
@@ -124,4 +125,17 @@ export function onGameOverAd(cb: (p: GameOverAdPayload) => void): () => void {
   const handler = (e: Event) => cb((e as CustomEvent<GameOverAdPayload>).detail);
   window.addEventListener(EV.GAME_OVER_AD, handler);
   return () => window.removeEventListener(EV.GAME_OVER_AD, handler);
+}
+
+// ── Privacy policy (Phaser → React) ─────────────────────────────────────────
+
+/** SettingsScene → React: open the in-app privacy policy overlay. */
+export function emitPrivacyPolicy(): void {
+  window.dispatchEvent(new CustomEvent(EV.PRIVACY_POLICY));
+}
+
+export function onPrivacyPolicy(cb: () => void): () => void {
+  const handler = () => cb();
+  window.addEventListener(EV.PRIVACY_POLICY, handler);
+  return () => window.removeEventListener(EV.PRIVACY_POLICY, handler);
 }

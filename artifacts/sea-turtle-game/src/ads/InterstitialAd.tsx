@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { analytics } from "../analytics/Analytics";
+import { AdmobBridge } from "./AdmobBridge";
 
 /*
- * InterstitialAd — full-screen ad shown at natural restart transitions (max once per 2.5 min)
+ * InterstitialAd — full-screen ad shown at natural restart transitions
  *
- * To integrate a real network, replace the simulated content with:
- *   AdMob:  window.admob.showInterstitial()
- *   Unity:  UnityAds.show("interstitial", { onComplete, onFailed })
- *   AdSense: google.ima SDK interstitial slot
+ * On native (Capacitor): delegates to AdmobBridge → @capacitor-community/admob
+ *   AdMob test unit ID: ca-app-pub-3940256099942544/1033173712
+ *   Swap production ID: src/ads/AdConfig.ts → AD_UNITS.interstitial
  *
- * Platform policy: close button MUST appear after ≤5 seconds (enforced below).
+ * On web/browser: renders mock interstitial UI (max 5 s close button)
+ *
+ * Platform policy: close button MUST appear after ≤5 seconds.
  */
 
 const COUNTDOWN_SECS = 5;
@@ -45,10 +47,10 @@ interface Props {
   onClose: () => void;
 }
 
-// Hard failsafe: auto-dismiss if never closed (covers SDK hangs in production)
 const FAILSAFE_MS = 12_000;
 
 export default function InterstitialAd({ onClose }: Props) {
+  const isNative = AdmobBridge.isNative();
   const [countdown, setCountdown] = useState(COUNTDOWN_SECS);
   const [loaded, setLoaded] = useState(false);
   const [ad] = useState(() => MOCK_ADS[Math.floor(Math.random() * MOCK_ADS.length)]);
@@ -61,15 +63,32 @@ export default function InterstitialAd({ onClose }: Props) {
     onClose();
   };
 
+  // ── Native AdMob interstitial ────────────────────────────────────────────────
   useEffect(() => {
+    if (!isNative) return;
+    AdmobBridge.prepareInterstitial()
+      .then((ready) => {
+        if (!ready) { safeClose(); return; }
+        AdmobBridge.showInterstitial(
+          () => safeClose(),
+          () => safeClose(),
+        );
+      })
+      .catch(() => safeClose());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Web mock interstitial ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (isNative) return;
     const loadT = setTimeout(() => setLoaded(true), 400);
-    // Failsafe: if the ad is still showing after FAILSAFE_MS, dismiss it automatically
     const failsafe = setTimeout(() => safeClose(), FAILSAFE_MS);
     return () => { clearTimeout(loadT); clearTimeout(failsafe); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (isNative || !loaded) return;
     intervalRef.current = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) { clearInterval(intervalRef.current!); return 0; }
@@ -77,7 +96,26 @@ export default function InterstitialAd({ onClose }: Props) {
       });
     }, 1000);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [loaded]);
+  }, [loaded, isNative]);
+
+  // On native, the SDK renders the ad natively; render an invisible placeholder
+  // while we wait for the dismiss callback to fire.
+  if (isNative) {
+    return (
+      <div
+        style={{
+          position: "absolute", inset: 0, zIndex: 200,
+          background: "rgba(0,0,0,0.85)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontFamily: "'Segoe UI', sans-serif" }}>
+          Loading ad…
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

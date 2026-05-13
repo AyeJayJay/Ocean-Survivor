@@ -29,6 +29,7 @@ export interface SaveData {
   musicMuted: boolean;
   sfxMuted: boolean;
   bestRunShells: number; // max shells collected in a single run
+  adConsentGiven: boolean | null;  // null = not yet asked, true = accepted, false = declined
 }
 
 const SAVE_KEY = "os_save_v2";
@@ -50,6 +51,7 @@ const DEFAULT_SAVE: SaveData = {
   musicMuted: false,
   sfxMuted: false,
   bestRunShells: 0,
+  adConsentGiven: null,
 };
 
 class SaveManager {
@@ -120,6 +122,7 @@ class SaveManager {
   get musicMuted(): boolean { return this.data.musicMuted; }
   get sfxMuted(): boolean { return this.data.sfxMuted; }
   get bestRunShells(): number { return this.data.bestRunShells; }
+  get adConsentGiven(): boolean | null { return this.data.adConsentGiven ?? null; }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
@@ -178,6 +181,11 @@ class SaveManager {
 
   setSfxMuted(muted: boolean): void {
     this.data.sfxMuted = muted;
+    this.commit();
+  }
+
+  setAdConsent(given: boolean): void {
+    this.data.adConsentGiven = given;
     this.commit();
   }
 

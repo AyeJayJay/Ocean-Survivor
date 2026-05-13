@@ -4,7 +4,7 @@
 
 import Phaser from "phaser";
 import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
-import { emitSceneChange } from "../game/EventBus";
+import { emitSceneChange, emitPrivacyPolicy } from "../game/EventBus";
 import { soundManager } from "../audio/SoundManager";
 import { saveManager } from "../save/SaveManager";
 
@@ -100,9 +100,24 @@ export class SettingsScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(10);
     });
 
+    // ── Privacy Policy link ───────────────────────────────────────────────────
+
+    const privacyBtn = this.add.text(cx, panelY + 510, "📋  Privacy Policy", {
+      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      color: "#4080a0",
+      align: "center",
+    }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
+
+    privacyBtn.on("pointerdown", () => {
+      soundManager.playTap();
+      emitPrivacyPolicy();
+    });
+    privacyBtn.on("pointerover", () => privacyBtn.setStyle({ color: "#60b0d0" }));
+    privacyBtn.on("pointerout",  () => privacyBtn.setStyle({ color: "#4080a0" }));
+
     // ── Ad consent placeholder ────────────────────────────────────────────────
 
-    const consentBtn = this.add.text(cx, panelY + 530, "Manage Ad Preferences", {
+    const consentBtn = this.add.text(cx, panelY + 548, "Manage Ad Preferences", {
       fontSize: "12px", fontFamily: "Arial, sans-serif",
       color: "#406080",
       align: "center",
@@ -110,7 +125,6 @@ export class SettingsScene extends Phaser.Scene {
 
     consentBtn.on("pointerdown", () => {
       soundManager.playTap();
-      // Placeholder — will be wired to CMP in Task 4
       this.showToast("Ad preferences (coming soon)");
     });
     consentBtn.on("pointerover", () => consentBtn.setStyle({ color: "#6090b0" }));

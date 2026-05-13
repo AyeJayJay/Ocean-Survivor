@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { Switch, Route, useLocation } from "wouter";
 import PhaserGame from "./game/PhaserGame";
 import BannerAd from "./ads/BannerAd";
 import InterstitialAd from "./ads/InterstitialAd";
 import RewardedAd from "./ads/RewardedAd";
+import AdConsentModal from "./ads/AdConsentModal";
 import { AdErrorBoundary } from "./ads/AdErrorBoundary";
+import { AdmobBridge } from "./ads/AdmobBridge";
 import { adFrequencyManager } from "./ads/AdFrequencyManager";
 import { analytics } from "./analytics/Analytics";
 import { soundManager } from "./audio/SoundManager";
+import { saveManager } from "./save/SaveManager";
 import DonateModal from "./pages/DonateModal";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import {
-  onGameState, onSceneChange, onAchievementToast, onGameOverAd,
+  onGameState, onSceneChange, onAchievementToast, onGameOverAd, onPrivacyPolicy,
   emitReviveCommand, emitRestartCommand, emitGameOverAdResult,
   type GameUIState, type GameStatePayload, type ScenePayload,
   type AchievementToastPayload,
@@ -83,39 +88,57 @@ function AchievementToast({ toast, onDone }: { toast: ToastData; onDone: () => v
   );
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
+// ── Game shell (main route at /) ───────────────────────────────────────────────
 
-export default function App() {
+function GameShell() {
+  const [, navigate] = useLocation();
   const phaserContainerRef = useRef<HTMLDivElement>(null);
 
-  // Layout scale
   const [scale, setScale] = useState(calcScale);
-
-  // Game state mirrored from Phaser via EventBus
   const [gameState, setGameState] = useState<GameUIState>("idle");
   const [activeScene, setActiveScene] = useState<ScenePayload["scene"]>("MainMenu");
   const [reviveAvailable, setReviveAvailable] = useState(false);
 
-  // Ad UI state
   const [showInterstitial, setShowInterstitial] = useState(false);
   const [showRewarded, setShowRewarded] = useState(false);
   const [rewardedForGameOver, setRewardedForGameOver] = useState(false);
 
-  // Death overlay delay
   const [deathButtonsReady, setDeathButtonsReady] = useState(false);
   const deathTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sound
   const [soundMuted, setSoundMuted] = useState(() => soundManager.sfxMuted);
-
-  // Donate modal
   const [showDonate, setShowDonate] = useState(false);
 
-  // Achievement toasts
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const toastKeyRef = useRef(0);
 
-  // ── Resize handler ──────────────────────────────────────────────────────────
+  const [showAdConsent, setShowAdConsent] = useState(false);
+
+  // ── Back-button handler (Android) — prevent accidental exit ──────────────────
+  // Capacitor/WebView surfaces Android back-button as a popstate or a custom
+  // 'backbutton' event. We intercept it to keep players in the game.
+  useEffect(() => {
+    const handleBackButton = (e: Event) => { e.preventDefault(); };
+    document.addEventListener("backbutton", handleBackButton, false);
+    return () => document.removeEventListener("backbutton", handleBackButton, false);
+  }, []);
+
+  // ── Ad consent + AdMob init on mount ─────────────────────────────────────────
+
+  useEffect(() => {
+    const consent = saveManager.adConsentGiven;
+    if (consent === null) {
+      setShowAdConsent(true);
+    } else if (consent === true) {
+      AdmobBridge.initialize().catch(() => {});
+    }
+  }, []);
+
+  const handleConsentDone = useCallback(() => {
+    setShowAdConsent(false);
+  }, []);
+
+  // ── Resize handler ────────────────────────────────────────────────────────────
 
   useEffect(() => {
     const handleResize = () => setScale(calcScale());
@@ -123,7 +146,7 @@ export default function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ── EventBus listeners ──────────────────────────────────────────────────────
+  // ── EventBus listeners ───────────────────────────────────────────────────────
 
   useEffect(() => {
     const offState = onGameState((payload: GameStatePayload) => {
@@ -171,8 +194,15 @@ export default function App() {
       }
     });
 
-    return () => { offState(); offScene(); offToast(); offGameOverAd(); };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Navigate to the /privacy route instead of showing an overlay —
+    // this makes Privacy Policy accessible via a real URL on web and
+    // as a full screen within the Capacitor WebView on native.
+    const offPrivacy = onPrivacyPolicy(() => {
+      navigate("/privacy");
+    });
+
+    return () => { offState(); offScene(); offToast(); offGameOverAd(); offPrivacy(); };
+  }, [navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeToast = useCallback((key: number) => {
     setToasts(prev => prev.filter(t => t.key !== key));
@@ -188,12 +218,10 @@ export default function App() {
   const handleReviveResult = useCallback((rewarded: boolean) => {
     setShowRewarded(false);
     if (rewardedForGameOver) {
-      // Ad was requested from the Game Over screen — emit the result back
       setRewardedForGameOver(false);
       if (rewarded) analytics.track("rewarded_game_over_completed");
       emitGameOverAdResult({ rewarded });
     } else {
-      // Ad was requested from the in-game death overlay — handle as revive
       if (rewarded) {
         analytics.track("rewarded_completed");
         adFrequencyManager.recordRewardedAd();
@@ -231,15 +259,8 @@ export default function App() {
   const bannerInteractive = !isGameplay;
   const bannerPosition = bannerCompact ? "top" : "bottom";
 
-  // ── Death overlay ─────────────────────────────────────────────────────────────
-
   const showDeathButtons = gameState === "dead" && deathButtonsReady && !anyFullScreenAd;
-
-  // ── Mute button visibility: show in all scenes ────────────────────────────────
-
   const showMuteBtn = !anyFullScreenAd;
-
-  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <div style={{
@@ -256,7 +277,6 @@ export default function App() {
         * { box-sizing: border-box; }
       `}</style>
 
-      {/* Scaled game container */}
       <div style={{
         position: "relative",
         width: GAME_WIDTH,
@@ -269,14 +289,9 @@ export default function App() {
         paddingLeft: "env(safe-area-inset-left)",
         paddingRight: "env(safe-area-inset-right)",
       }}>
-        {/* Phaser mounts its canvas into this div */}
-        <div
-          ref={phaserContainerRef}
-          style={{ position: "absolute", inset: 0 }}
-        />
+        <div ref={phaserContainerRef} style={{ position: "absolute", inset: 0 }} />
         <PhaserGame containerRef={phaserContainerRef} />
 
-        {/* ── Achievement toasts ──────────────────────────────────────────────── */}
         {toasts.map((toast) => (
           <AchievementToast
             key={toast.key}
@@ -285,7 +300,6 @@ export default function App() {
           />
         ))}
 
-        {/* ── Death overlay ──────────────────────────────────────────────────── */}
         {showDeathButtons && (
           <div
             style={{
@@ -338,8 +352,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── Full-screen ad overlays ──────────────────────────────────────── */}
-
         {showInterstitial && (
           <AdErrorBoundary onError={handleInterstitialClose}>
             <InterstitialAd onClose={handleInterstitialClose} />
@@ -352,12 +364,10 @@ export default function App() {
           </AdErrorBoundary>
         )}
 
-        {/* ── Donate modal ─────────────────────────────────────────────────── */}
         {DONATIONS_ENABLED && showDonate && (
           <DonateModal onClose={() => setShowDonate(false)} />
         )}
 
-        {/* ── Banner ad ────────────────────────────────────────────────────── */}
         <AdErrorBoundary onError={() => {}}>
           <BannerAd
             visible={bannerVisible}
@@ -368,7 +378,6 @@ export default function App() {
           />
         </AdErrorBoundary>
 
-        {/* ── Mute button ──────────────────────────────────────────────────── */}
         {showMuteBtn && (
           <button
             onClick={toggleSound}
@@ -393,7 +402,22 @@ export default function App() {
             {soundMuted ? "🔇" : "🔊"}
           </button>
         )}
+
+        {showAdConsent && (
+          <AdConsentModal onDone={handleConsentDone} />
+        )}
       </div>
     </div>
+  );
+}
+
+// ── App — top-level router ────────────────────────────────────────────────────
+
+export default function App() {
+  return (
+    <Switch>
+      <Route path="/privacy">{() => <PrivacyPolicy />}</Route>
+      <Route>{() => <GameShell />}</Route>
+    </Switch>
   );
 }

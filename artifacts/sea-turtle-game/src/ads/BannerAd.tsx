@@ -1,19 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { AdmobBridge } from "./AdmobBridge";
 
 /*
  * BannerAd — adaptive banner (50px menu / 32px gameplay)
  *
- * Features:
- *  - Asynchronous load with shimmer placeholder
- *  - Auto-refreshes every 30 s while visible
- *  - Smooth opacity transition on show/hide (never abruptly pops)
- *  - `compact` prop for a slimmer in-game strip
- *  - Graceful failure handling (hidden, no layout impact)
+ * On native (Capacitor): delegates to AdmobBridge → @capacitor-community/admob
+ * On web/browser:        renders mock banner UI as fallback
  *
- * To swap in a real network:
- *   AdMob:   Replace loadAd() body with window.admob.requestBanner(adUnitId)
- *   AdSense: Render <ins class="adsbygoogle"> with the real data-ad-* attrs
- *   Unity:   Call UnityAds.load("banner", listener) and show on ready
+ * AdMob test unit ID:   ca-app-pub-3940256099942544/6300978111
+ * Swap production ID in: src/ads/AdConfig.ts → AD_UNITS.banner
  */
 
 const REFRESH_INTERVAL_MS = 30_000;
@@ -45,6 +40,8 @@ export default function BannerAd({
   compact = false,
   interactive = true,
 }: Props) {
+  const isNative = AdmobBridge.isNative();
+
   const [status, setStatus] = useState<Status>("loading");
   const [ad, setAd] = useState(MOCK_ADS[0]);
   const [everLoaded, setEverLoaded] = useState(false);
@@ -56,6 +53,21 @@ export default function BannerAd({
     return () => { mountedRef.current = false; };
   }, []);
 
+  // ── Native AdMob banner ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isNative) return;
+    if (visible) {
+      AdmobBridge.showBanner()
+        .then((ok) => { if (mountedRef.current) setStatus(ok ? "ready" : "failed"); })
+        .catch(() => { if (mountedRef.current) setStatus("failed"); });
+    } else {
+      AdmobBridge.hideBanner();
+      setStatus("loading");
+    }
+    return () => { AdmobBridge.hideBanner(); };
+  }, [visible, isNative]);
+
+  // ── Web mock banner ──────────────────────────────────────────────────────────
   const loadAd = useCallback(() => {
     setStatus("loading");
     const delay = 600 + Math.random() * 500;
@@ -72,6 +84,7 @@ export default function BannerAd({
   }, []);
 
   useEffect(() => {
+    if (isNative) return;
     if (!visible) {
       if (refreshRef.current) { clearInterval(refreshRef.current); refreshRef.current = null; }
       return;
@@ -79,13 +92,16 @@ export default function BannerAd({
     loadAd();
     refreshRef.current = setInterval(loadAd, REFRESH_INTERVAL_MS);
     return () => { if (refreshRef.current) { clearInterval(refreshRef.current); refreshRef.current = null; } };
-  }, [visible, loadAd]);
+  }, [visible, loadAd, isNative]);
+
+  // On native, the AdMob SDK renders the banner natively outside the WebView,
+  // so we don't render any HTML. Just return null to keep the JS tree clean.
+  if (isNative) return null;
 
   const height = compact ? 32 : 50;
   const iconSize = compact ? 22 : 34;
   const posStyle = position === "top" ? { top: offset } : { bottom: offset };
 
-  // Keep in DOM for smooth fade-out; remove only on permanent failure
   if (status === "failed" && !everLoaded) return null;
 
   const shown = visible && status === "ready";

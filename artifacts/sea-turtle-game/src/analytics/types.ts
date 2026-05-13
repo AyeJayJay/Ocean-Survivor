@@ -29,4 +29,6 @@ export type AnalyticsEventType =
   | "rewarded_game_over_preroll_shown"
   | "rewarded_game_over_completed"
   | "banner_impression"
-  | "interstitial_cta_click";
+  | "interstitial_cta_click"
+  | "ad_consent_accepted"
+  | "ad_consent_declined";
