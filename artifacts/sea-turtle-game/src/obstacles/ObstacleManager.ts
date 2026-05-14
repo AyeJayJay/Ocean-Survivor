@@ -282,11 +282,11 @@ export class ObstacleManager {
     g.clear();
 
     for (const obs of this.obstacles) {
-      this.drawPair(g, obs);
+      this.drawPair(g, obs, this.tick);
     }
   }
 
-  private drawPair(g: Phaser.GameObjects.Graphics, obs: ObstaclePair): void {
+  private drawPair(g: Phaser.GameObjects.Graphics, obs: ObstaclePair, tick: number): void {
     const { x, gapY, gap, type } = obs;
     const p = PALETTES[type];
     const topH = gapY;
@@ -319,13 +319,14 @@ export class ObstacleManager {
     g.fillRect(x + w - 6, botY, 6, botH);
 
     // ── Type-specific decorations ─────────────────────────────────────────────
-    this.drawTypeDecoration(g, obs, p);
+    this.drawTypeDecoration(g, obs, p, tick);
   }
 
   private drawTypeDecoration(
     g: Phaser.GameObjects.Graphics,
     obs: ObstaclePair,
     p: TypePalette,
+    tick: number,
   ): void {
     const { x, gapY, gap, type } = obs;
     const w = OBSTACLE_WIDTH;
@@ -333,139 +334,207 @@ export class ObstacleManager {
     const botY = gapY + gap;
 
     switch (type) {
+
       // ── Plastic bags ────────────────────────────────────────────────────────
       case "plastic_bag": {
-        // Crumpled bag shapes at pillar tips
-        g.fillStyle(p.accent, p.accentAlpha);
-        // Top pillar tip: bag cluster
-        for (let i = 0; i < 4; i++) {
-          const bx = x + 10 + i * 16;
-          g.fillEllipse(bx, gapY - 8, 14, 18);
-        }
-        // Bottom pillar tip
-        for (let i = 0; i < 4; i++) {
-          const bx = x + 10 + i * 16;
-          g.fillEllipse(bx, botY + 8, 14, 18);
-        }
-        // Plastic sheen lines
-        g.lineStyle(1, 0xffffff, 0.25);
+        // Bag body at top pillar tip
+        const bagW = 48, bagH = 28;
+        g.fillStyle(p.accent, 0.62);
+        g.fillRect(cx - bagW / 2, gapY - bagH, bagW, bagH);
+        g.fillEllipse(cx, gapY - 1, bagW, 10);
+        // Bag handles
+        g.lineStyle(3, p.accent, 0.85);
+        g.strokeEllipse(cx - 12, gapY - bagH - 4, 14, 12);
+        g.strokeEllipse(cx + 12, gapY - bagH - 4, 14, 12);
+        // Crinkle sheen lines in pillar
+        g.lineStyle(1, 0xffffff, 0.22);
         for (let i = 0; i < 3; i++) {
-          const lx = x + 15 + i * 22;
-          g.beginPath();
-          g.moveTo(lx, 0);
-          g.lineTo(lx, gapY);
-          g.strokePath();
-          g.beginPath();
-          g.moveTo(lx, botY);
-          g.lineTo(lx, GAME_HEIGHT);
-          g.strokePath();
+          const lx = x + 12 + i * 22;
+          g.beginPath(); g.moveTo(lx, 0); g.lineTo(lx, gapY - bagH); g.strokePath();
+        }
+        // Floating wisps off pillar edge
+        g.fillStyle(p.accent, 0.38);
+        g.fillEllipse(cx - 26, gapY - 46, 9, 22);
+        g.fillEllipse(cx + 23, gapY - 54, 7, 18);
+
+        // Bottom pillar bag (floating upward)
+        const bbagW = 40;
+        g.fillStyle(p.accent, 0.57);
+        g.fillRect(cx - bbagW / 2, botY, bbagW, 24);
+        g.fillEllipse(cx, botY + 24, bbagW, 10);
+        g.lineStyle(3, p.accent, 0.80);
+        g.strokeEllipse(cx - 10, botY + 28, 12, 10);
+        g.strokeEllipse(cx + 10, botY + 28, 12, 10);
+        g.lineStyle(1, 0xffffff, 0.18);
+        for (let i = 0; i < 3; i++) {
+          const lx = x + 12 + i * 22;
+          g.beginPath(); g.moveTo(lx, botY + 34); g.lineTo(lx, GAME_HEIGHT); g.strokePath();
         }
         break;
       }
 
       // ── Fishing net ─────────────────────────────────────────────────────────
       case "fishing_net": {
-        // Grid pattern over the pillars
-        g.lineStyle(1, p.accent, 0.45);
         const gridSpacing = 16;
-        // Vertical lines
+        // Orthogonal grid
+        g.lineStyle(1, p.accent, 0.42);
         for (let lx = x; lx <= x + w; lx += gridSpacing) {
           g.beginPath(); g.moveTo(lx, 0); g.lineTo(lx, gapY); g.strokePath();
           g.beginPath(); g.moveTo(lx, botY); g.lineTo(lx, GAME_HEIGHT); g.strokePath();
         }
-        // Horizontal lines
         for (let ly = 0; ly < gapY; ly += gridSpacing) {
           g.beginPath(); g.moveTo(x, ly); g.lineTo(x + w, ly); g.strokePath();
         }
         for (let ly = botY; ly < GAME_HEIGHT; ly += gridSpacing) {
           g.beginPath(); g.moveTo(x, ly); g.lineTo(x + w, ly); g.strokePath();
         }
-        // Frayed edge at gap
-        g.fillStyle(p.accent, 0.85);
-        for (let i = 0; i < 5; i++) {
-          const fx = x + 8 + i * 14;
-          const fLen = 8 + (i % 2) * 6;
-          g.fillRect(fx - 1, gapY - fLen, 2, fLen);
-          g.fillRect(fx - 1, botY, 2, fLen);
+        // Diagonal \\ lines for diamond-mesh effect — top pillar
+        g.lineStyle(1, p.accent, 0.22);
+        const dStep = 18;
+        for (let dy = -w; dy <= gapY; dy += dStep) {
+          const sx = x + Math.max(0, -dy);
+          const sy = Math.max(0, dy);
+          const ex = x + Math.min(w, gapY - dy);
+          const ey = Math.min(gapY, dy + w);
+          if (sx < x + w && ex > x && sy < gapY && ey > 0) {
+            g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.strokePath();
+          }
+        }
+        // Bottom pillar diagonals
+        for (let dy = botY - w; dy <= GAME_HEIGHT; dy += dStep) {
+          const sy = Math.max(botY, dy);
+          const sx2 = x + Math.max(0, sy - dy);
+          const ey = Math.min(GAME_HEIGHT, dy + w);
+          const ex2 = x + Math.min(w, ey - dy);
+          if (sx2 < x + w && ex2 > x && sy < GAME_HEIGHT) {
+            g.beginPath(); g.moveTo(sx2, sy); g.lineTo(ex2, ey); g.strokePath();
+          }
+        }
+        // Frayed rope edges dangling into gap
+        g.lineStyle(2, p.accent, 0.90);
+        for (let i = 0; i < 6; i++) {
+          const fx2 = x + 5 + i * (w - 10) / 5;
+          const fLen = 10 + (i % 3) * 7;
+          g.beginPath();
+          g.moveTo(fx2, gapY); g.lineTo(fx2 + (i % 2 === 0 ? 2 : -2), gapY + fLen); g.strokePath();
+          g.beginPath();
+          g.moveTo(fx2, botY); g.lineTo(fx2 + (i % 2 === 0 ? 2 : -2), botY - fLen); g.strokePath();
         }
         break;
       }
 
       // ── Oil blob ─────────────────────────────────────────────────────────────
       case "oil_blob": {
-        // Iridescent sheen on the oil mass
-        g.fillStyle(0x4a2800, 0.5);
-        for (let i = 0; i < 4; i++) {
-          const bx = x + 8 + i * 16;
-          g.fillEllipse(bx, gapY - 10, 20, 22);
-          g.fillEllipse(bx, botY + 10, 20, 22);
+        // Animated iridescent rainbow sheen
+        const iriColors = [0x4040ff, 0x0060ff, 0x008060, 0x406000, 0x603000];
+        for (let ci = 0; ci < iriColors.length; ci++) {
+          const iriAlpha = 0.05 + 0.035 * Math.sin(tick * 0.018 + ci * 1.2);
+          g.fillStyle(iriColors[ci], iriAlpha);
+          const offX = ci * 8 - 16;
+          g.fillEllipse(cx + offX, gapY - 9, 32, 15);
+          g.fillEllipse(cx + offX, botY + 9, 32, 15);
         }
-        // Oil shimmer
-        g.fillStyle(0x602000, 0.4);
-        g.fillEllipse(cx, gapY - 15, 50, 24);
-        g.fillStyle(0x200800, 0.6);
-        g.fillEllipse(cx, botY + 15, 50, 24);
-        // Dark drip marks
-        g.fillStyle(0x080400, 0.7);
-        for (let i = 0; i < 3; i++) {
-          const dx = x + 18 + i * 20;
-          g.fillEllipse(dx, gapY - 4, 6, 14);
-          g.fillEllipse(dx, botY + 4, 6, 14);
+        // Dark oil mass at pillar tips
+        g.fillStyle(0x1a0a02, 0.82);
+        g.fillEllipse(cx, gapY - 12, 56, 22);
+        g.fillEllipse(cx, botY + 12, 56, 22);
+        // Surface drip bubbles
+        g.fillStyle(0x0a0400, 0.55);
+        for (let i = 0; i < 4; i++) {
+          const bx = x + 9 + i * 18;
+          g.fillEllipse(bx, gapY - 7, 9, 11);
+          g.fillEllipse(bx, botY + 7, 9, 11);
         }
         break;
       }
 
       // ── Soda rings ──────────────────────────────────────────────────────────
       case "soda_rings": {
-        // Stacked can silhouettes
+        // Can body seam lines
         g.fillStyle(p.accent, 0.9);
         const canSpacing = 18;
         for (let cy2 = canSpacing; cy2 < gapY; cy2 += canSpacing) {
-          g.fillRect(x + 4, cy2 - 2, w - 8, 4);  // can seam line
+          g.fillRect(x + 4, cy2 - 2, w - 8, 4);
         }
         for (let cy2 = botY + canSpacing; cy2 < GAME_HEIGHT; cy2 += canSpacing) {
           g.fillRect(x + 4, cy2 - 2, w - 8, 4);
         }
-        // Ring-pull shapes at tip
-        g.lineStyle(3, p.accent, 1.0);
-        g.strokeEllipse(cx - 10, gapY - 6, 14, 10);
-        g.strokeEllipse(cx + 10, gapY - 6, 14, 10);
-        g.strokeEllipse(cx - 10, botY + 6, 14, 10);
-        g.strokeEllipse(cx + 10, botY + 6, 14, 10);
+        // Six-pack plastic carrier rings at tips (3×2 grid)
+        g.lineStyle(2.5, 0xddaaaa, 0.88);
+        for (let row = 0; row < 2; row++) {
+          for (let col = 0; col < 3; col++) {
+            const rx = x + 7 + col * 24;
+            const ry = gapY - 8 - row * 16;
+            if (ry > 0) g.strokeEllipse(rx, ry, 20, 12);
+          }
+        }
+        for (let row = 0; row < 2; row++) {
+          for (let col = 0; col < 3; col++) {
+            const rx = x + 7 + col * 24;
+            const ry = botY + 8 + row * 16;
+            if (ry < GAME_HEIGHT) g.strokeEllipse(rx, ry, 20, 12);
+          }
+        }
         break;
       }
 
       // ── Jellyfish ────────────────────────────────────────────────────────────
       case "jellyfish": {
-        // Bell shapes hanging from pillar tips
-        g.fillStyle(p.accent, 0.55);
-        g.fillEllipse(cx - 14, gapY - 12, 28, 20);
-        g.fillEllipse(cx + 8, gapY - 18, 22, 16);
-        // Tentacles dangling down from top pillar tip
-        g.lineStyle(1.5, p.accent, 0.65);
-        for (let i = 0; i < 6; i++) {
-          const tx = x + 6 + i * 11;
-          const len = 10 + (i % 3) * 7;
+        const pulse = 1 + Math.sin(tick * 0.05) * 0.12;
+
+        // Glowing bell domes at top tip
+        g.fillStyle(0x80e0ff, 0.07 + Math.sin(tick * 0.03) * 0.02);
+        g.fillEllipse(cx, gapY - 8, (w - 8) * pulse, 28 * pulse);
+        g.fillStyle(p.accent, 0.62);
+        g.fillEllipse(cx - 14, gapY - 14, 30 * pulse, 20);
+        g.fillEllipse(cx + 10, gapY - 20, 24 * pulse, 16);
+        // Bell highlights
+        g.fillStyle(0xc8f8ff, 0.28);
+        g.fillEllipse(cx - 14, gapY - 16, 12, 7);
+        g.fillEllipse(cx + 10, gapY - 22, 10, 6);
+
+        // Animated wavy tentacles from top tip
+        g.lineStyle(1.5, p.accent, 0.72);
+        const tentCount = 8;
+        for (let i = 0; i < tentCount; i++) {
+          const tx = x + 4 + i * (w - 8) / (tentCount - 1);
+          const tLen = 12 + (i % 3) * 9;
+          const wavePhase = tick * 0.042 + i * 0.75;
+          const steps = 5;
           g.beginPath();
           g.moveTo(tx, gapY);
-          g.lineTo(tx + Math.sin(i) * 4, gapY + len);
+          for (let s = 1; s <= steps; s++) {
+            const tt = s / steps;
+            g.lineTo(tx + Math.sin(tt * Math.PI * 1.6 + wavePhase) * 5.5, gapY + tt * tLen);
+          }
           g.strokePath();
         }
-        // Rising bells from bottom pillar tip
-        g.fillStyle(p.accent, 0.5);
-        g.fillEllipse(cx - 10, botY + 14, 26, 18);
-        g.fillEllipse(cx + 12, botY + 8, 20, 14);
-        // Tentacles up from bottom
-        for (let i = 0; i < 6; i++) {
-          const tx = x + 6 + i * 11;
-          const len = 10 + (i % 3) * 7;
+
+        // Bell domes at bottom tip
+        g.fillStyle(p.accent, 0.58);
+        g.fillEllipse(cx - 10, botY + 14, 28 * pulse, 18);
+        g.fillEllipse(cx + 12, botY + 8, 22 * pulse, 14);
+        g.fillStyle(0xc8f8ff, 0.22);
+        g.fillEllipse(cx - 10, botY + 12, 11, 6);
+
+        // Animated wavy tentacles from bottom tip (pointing up)
+        g.lineStyle(1.5, p.accent, 0.68);
+        for (let i = 0; i < tentCount; i++) {
+          const tx = x + 4 + i * (w - 8) / (tentCount - 1);
+          const tLen = 12 + (i % 3) * 9;
+          const wavePhase = tick * 0.042 + i * 0.75 + Math.PI;
+          const steps = 5;
           g.beginPath();
           g.moveTo(tx, botY);
-          g.lineTo(tx + Math.sin(i) * 4, botY - len);
+          for (let s = 1; s <= steps; s++) {
+            const tt = s / steps;
+            g.lineTo(tx + Math.sin(tt * Math.PI * 1.6 + wavePhase) * 5.5, botY - tt * tLen);
+          }
           g.strokePath();
         }
-        // Glow effect
-        g.fillStyle(0x80d0ff, 0.08);
+
+        // Bioluminescent column glow
+        g.fillStyle(0x40c8ff, 0.05 + Math.sin(tick * 0.04) * 0.015);
         g.fillRect(x, 0, w, gapY);
         g.fillRect(x, botY, w, GAME_HEIGHT - botY);
         break;
@@ -473,119 +542,146 @@ export class ObstacleManager {
 
       // ── Shark ────────────────────────────────────────────────────────────────
       case "shark": {
-        // Dorsal fin at top pillar tip (pointing down)
+        // Dorsal fin at top tip (pointing down into gap)
         g.fillStyle(p.accent, 0.95);
         g.beginPath();
-        g.moveTo(cx - 16, gapY);
-        g.lineTo(cx, gapY - 28);
-        g.lineTo(cx + 16, gapY);
-        g.closePath();
-        g.fillPath();
-        // Second smaller fin
+        g.moveTo(cx - 16, gapY); g.lineTo(cx, gapY - 30); g.lineTo(cx + 16, gapY);
+        g.closePath(); g.fillPath();
+        // Secondary fin
         g.beginPath();
-        g.moveTo(cx + 18, gapY);
-        g.lineTo(cx + 26, gapY - 14);
-        g.lineTo(cx + 34, gapY);
-        g.closePath();
-        g.fillPath();
-        // Tail fin at bottom pillar tip (pointing up)
+        g.moveTo(cx + 18, gapY); g.lineTo(cx + 26, gapY - 16); g.lineTo(cx + 34, gapY);
+        g.closePath(); g.fillPath();
+
+        // Shark teeth at top tip (pointing down into gap)
+        const toothCount = 7;
+        const toothW = (w - 10) / toothCount;
+        g.fillStyle(0xf2f2f2, 0.94);
+        for (let i = 0; i < toothCount; i++) {
+          const tx = x + 5 + i * toothW;
+          g.beginPath();
+          g.moveTo(tx, gapY); g.lineTo(tx + toothW / 2, gapY + 11); g.lineTo(tx + toothW, gapY);
+          g.closePath(); g.fillPath();
+        }
+
+        // Tail fin at bottom (pointing up into gap)
+        g.fillStyle(p.accent, 0.90);
         g.beginPath();
-        g.moveTo(cx - 20, botY);
-        g.lineTo(cx, botY + 24);
-        g.lineTo(cx + 20, botY);
-        g.closePath();
-        g.fillPath();
-        // Gill lines on pillar
-        g.lineStyle(2, p.accent, 0.5);
+        g.moveTo(cx - 20, botY); g.lineTo(cx, botY + 26); g.lineTo(cx + 20, botY);
+        g.closePath(); g.fillPath();
+
+        // Teeth at bottom tip (pointing up)
+        g.fillStyle(0xf2f2f2, 0.94);
+        for (let i = 0; i < toothCount; i++) {
+          const tx = x + 5 + i * toothW;
+          g.beginPath();
+          g.moveTo(tx, botY); g.lineTo(tx + toothW / 2, botY - 11); g.lineTo(tx + toothW, botY);
+          g.closePath(); g.fillPath();
+        }
+
+        // Gill lines on top pillar
+        g.lineStyle(2, p.accent, 0.52);
         for (let i = 0; i < 3; i++) {
-          const ly = gapY - 50 - i * 20;
+          const ly = gapY - 52 - i * 22;
           if (ly < 0) break;
           g.beginPath();
-          g.moveTo(cx - 20, ly);
-          g.lineTo(cx - 12, ly + 8);
-          g.strokePath();
+          g.moveTo(cx - 22, ly); g.lineTo(cx - 12, ly + 10); g.strokePath();
         }
         break;
       }
 
       // ── Fishing hook ─────────────────────────────────────────────────────────
       case "fishing_hook": {
-        // Tangled fishing lines
-        g.lineStyle(1.5, p.accent, 0.7);
+        // Tangled fishing lines in pillar
+        g.lineStyle(1.5, p.accent, 0.68);
         for (let i = 0; i < 4; i++) {
           const lx = x + 10 + i * 16;
           g.beginPath();
           g.moveTo(lx, 0);
-          g.lineTo(lx + 8, gapY * 0.3);
-          g.lineTo(lx - 6, gapY * 0.7);
+          g.lineTo(lx + 8, gapY * 0.33);
+          g.lineTo(lx - 6, gapY * 0.66);
           g.lineTo(lx, gapY);
           g.strokePath();
         }
-        // Hook shape at top tip
-        g.lineStyle(3, p.accent, 1.0);
+        // Large J-hook at top tip
+        g.lineStyle(3.5, p.accent, 1.0);
         g.beginPath();
-        g.moveTo(cx - 10, gapY - 24);
-        g.lineTo(cx - 10, gapY - 6);
-        g.lineTo(cx + 6, gapY - 6);
-        g.lineTo(cx + 6, gapY - 12);
+        g.moveTo(cx - 8, gapY - 28); g.lineTo(cx - 8, gapY - 4);
+        g.lineTo(cx + 8, gapY - 4); g.lineTo(cx + 8, gapY - 10);
         g.strokePath();
-        // Hook barb
+        // Barb
         g.beginPath();
-        g.moveTo(cx + 6, gapY - 6);
-        g.lineTo(cx - 2, gapY - 2);
-        g.strokePath();
-        // Same hook at bottom (upside down)
+        g.moveTo(cx + 8, gapY - 4); g.lineTo(cx + 1, gapY); g.strokePath();
+        // Red bait at hook point
+        g.fillStyle(0xff5030, 0.92);
+        g.fillEllipse(cx + 1, gapY + 3, 9, 7);
+
+        // Inverted J-hook at bottom tip
+        g.lineStyle(3.5, p.accent, 1.0);
         g.beginPath();
-        g.moveTo(cx - 10, botY + 24);
-        g.lineTo(cx - 10, botY + 6);
-        g.lineTo(cx + 6, botY + 6);
-        g.lineTo(cx + 6, botY + 12);
+        g.moveTo(cx - 8, botY + 28); g.lineTo(cx - 8, botY + 4);
+        g.lineTo(cx + 8, botY + 4); g.lineTo(cx + 8, botY + 10);
         g.strokePath();
         g.beginPath();
-        g.moveTo(cx + 6, botY + 6);
-        g.lineTo(cx - 2, botY + 2);
-        g.strokePath();
+        g.moveTo(cx + 8, botY + 4); g.lineTo(cx + 1, botY); g.strokePath();
+        g.fillStyle(0xff5030, 0.92);
+        g.fillEllipse(cx + 1, botY - 3, 9, 7);
         break;
       }
 
       // ── Boat ─────────────────────────────────────────────────────────────────
       case "boat": {
-        // Boat hull underside at top pillar tip (boat sitting at surface above)
+        // Hull underside at top pillar tip
         g.fillStyle(p.accent, 0.92);
-        // Rounded hull shape
         g.beginPath();
-        g.moveTo(x, gapY);
-        g.lineTo(x, gapY - 18);
-        g.lineTo(x + w, gapY - 18);
-        g.lineTo(x + w, gapY);
-        g.closePath();
-        g.fillPath();
-        // Planking details
-        g.lineStyle(1, 0x9c7048, 0.7);
-        for (let i = 1; i < 4; i++) {
+        g.moveTo(x + 4, gapY);
+        g.lineTo(x, gapY - 14); g.lineTo(x, gapY - 22);
+        g.lineTo(x + w, gapY - 22); g.lineTo(x + w, gapY - 14);
+        g.lineTo(x + w - 4, gapY);
+        g.closePath(); g.fillPath();
+        // Hull planking
+        g.lineStyle(1, 0x9c7048, 0.70);
+        for (let i = 1; i <= 4; i++) {
           g.beginPath();
-          g.moveTo(x, gapY - i * 5);
-          g.lineTo(x + w, gapY - i * 5);
-          g.strokePath();
+          g.moveTo(x, gapY - i * 5); g.lineTo(x + w, gapY - i * 5); g.strokePath();
         }
-        // Keel line
-        g.lineStyle(2, 0x5c3018, 0.9);
+        // Keel
+        g.lineStyle(2.5, 0x5c3018, 0.92);
         g.beginPath();
-        g.moveTo(x + w * 0.2, gapY);
-        g.lineTo(cx, gapY + 6);
-        g.lineTo(x + w * 0.8, gapY);
+        g.moveTo(x + w * 0.18, gapY); g.lineTo(cx, gapY + 7); g.lineTo(x + w * 0.82, gapY);
         g.strokePath();
-        // Anchor chain at bottom pillar
+        // Faint sheen lines above hull
+        g.lineStyle(1, 0xffffff, 0.08);
+        for (let i = 0; i < 3; i++) {
+          const lx = x + 12 + i * 22;
+          g.beginPath(); g.moveTo(lx, 0); g.lineTo(lx, gapY - 22); g.strokePath();
+        }
+
+        // Animated spinning propeller at bottom pillar
+        const propX = cx, propY = botY + 24;
+        g.fillStyle(p.accent, 0.90);
+        const bladeAngle = (tick * 0.09) % (Math.PI * 2);
+        for (let blade = 0; blade < 3; blade++) {
+          const ang = bladeAngle + (blade / 3) * Math.PI * 2;
+          const bx1 = propX + Math.cos(ang) * 14;
+          const by1 = propY + Math.sin(ang) * 14;
+          const bx2 = propX + Math.cos(ang + 0.55) * 7;
+          const by2 = propY + Math.sin(ang + 0.55) * 7;
+          g.beginPath();
+          g.moveTo(propX, propY); g.lineTo(bx1, by1); g.lineTo(bx2, by2);
+          g.closePath(); g.fillPath();
+        }
+        // Propeller hub
+        g.fillStyle(0x7c5030, 1.0);
+        g.fillCircle(propX, propY, 4);
+
+        // Anchor chain running down the pillar
         g.lineStyle(2.5, p.accent, 0.85);
-        const chainLinks = Math.floor((GAME_HEIGHT - botY) / 14);
+        const chainStart = botY + 46;
+        const chainLinks = Math.floor((GAME_HEIGHT - chainStart) / 14);
         for (let i = 0; i < chainLinks; i++) {
-          const ly = botY + 7 + i * 14;
-          const even = i % 2 === 0;
-          if (even) {
-            g.strokeEllipse(cx, ly, 8, 12);
-          } else {
-            g.strokeEllipse(cx, ly, 12, 8);
-          }
+          const ly = chainStart + i * 14;
+          const horiz = i % 2 === 0;
+          g.strokeEllipse(cx, ly, horiz ? 12 : 8, horiz ? 8 : 12);
         }
         break;
       }

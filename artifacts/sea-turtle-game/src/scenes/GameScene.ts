@@ -30,6 +30,16 @@ interface Bubble {
   speed: number; alpha: number;
 }
 
+interface SeaCreature {
+  x: number;          // base x in virtual tile [0, BG_TILE_W)
+  y: number;          // screen y
+  type: "fish" | "jelly" | "shark_bg";
+  speedRatio: number; // parallax scroll factor
+  phase: number;      // animation phase offset
+  scale: number;      // draw scale multiplier
+  dir: 1 | -1;        // swimming direction (+1 = right, -1 = left)
+}
+
 type GameState = "playing" | "paused" | "dead";
 
 /*
@@ -56,6 +66,8 @@ export class GameScene extends Phaser.Scene {
   private bubbles: Bubble[] = [];
   private scrollX = 0;
   private tick = 0;
+  private seaCreatures: SeaCreature[] = [];
+  private readonly BG_TILE_W = GAME_WIDTH * 2;
 
   // HUD
   private scoreText!: Phaser.GameObjects.Text;
@@ -116,6 +128,7 @@ export class GameScene extends Phaser.Scene {
     this.bgGfx = this.add.graphics().setDepth(0);
     this.fxGfx = this.add.graphics().setDepth(1);
     this.buildBgShapes();
+    this.buildSeaCreatures();
 
     // Near-miss edge flash (depth 49 — just below death flash)
     this.nearMissGfx = this.add.graphics().setDepth(49);
@@ -853,10 +866,178 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Sea creatures parallax layer (above silhouettes, below bubbles)
+    this.drawSeaCreatures(fx, bf);
+
     const bubbleColor = bf > 0.5 ? 0xa0eeff : 0x80d0ff;
     for (const b of this.bubbles) {
       fx.lineStyle(1.2, bubbleColor, b.alpha);
       fx.strokeCircle(b.x, b.y, b.r);
     }
+  }
+
+  // ── Sea creatures (background atmosphere) ────────────────────────────────────
+
+  private buildSeaCreatures(): void {
+    this.seaCreatures = [];
+    const tw = this.BG_TILE_W;
+
+    // Fish schools — 4 schools at different depths and parallax speeds
+    const fishCfg: Array<[number, number, number, number, 1 | -1]> = [
+      // [xFrac, yFrac, speedRatio, scale, dir]
+      [0.08, 0.22, 0.08, 0.72,  1],
+      [0.42, 0.40, 0.12, 0.55, -1],
+      [0.65, 0.62, 0.07, 0.85,  1],
+      [0.88, 0.78, 0.10, 0.62, -1],
+    ];
+    for (const [xf, yf, sr, sc, dir] of fishCfg) {
+      this.seaCreatures.push({
+        x: xf * tw,
+        y: GAME_HEIGHT * yf,
+        type: "fish",
+        speedRatio: sr,
+        phase: Math.random() * Math.PI * 2,
+        scale: sc,
+        dir,
+      });
+    }
+
+    // Background jellyfish — 3 drifting at different depths
+    const jellyCfg: Array<[number, number, number, number]> = [
+      [0.20, 0.18, 0.04, 0.55],
+      [0.58, 0.48, 0.06, 0.45],
+      [0.85, 0.32, 0.03, 0.65],
+    ];
+    for (const [xf, yf, sr, sc] of jellyCfg) {
+      this.seaCreatures.push({
+        x: xf * tw,
+        y: GAME_HEIGHT * yf,
+        type: "jelly",
+        speedRatio: sr,
+        phase: Math.random() * Math.PI * 2,
+        scale: sc,
+        dir: 1,
+      });
+    }
+
+    // Distant shark silhouette
+    this.seaCreatures.push({
+      x: tw * 0.35,
+      y: GAME_HEIGHT * 0.28,
+      type: "shark_bg",
+      speedRatio: 0.09,
+      phase: 0,
+      scale: 0.62,
+      dir: -1,
+    });
+  }
+
+  private drawSeaCreatures(g: Phaser.GameObjects.Graphics, bf: number): void {
+    const tw = this.BG_TILE_W;
+    const t = this.tick;
+
+    for (const c of this.seaCreatures) {
+      const offset = (this.scrollX * c.speedRatio) % tw;
+      const worldX = ((c.x - offset) % tw + tw) % tw;
+
+      // Show up to 3 tile reps so the creature is always visible
+      for (let rep = 0; rep < 3; rep++) {
+        const sx = worldX + rep * tw - tw;
+        if (sx < -160 || sx > GAME_WIDTH + 160) continue;
+
+        const wobbleY = Math.sin(t * 0.022 + c.phase) * 5;
+        const sy = c.y + wobbleY;
+        const alpha = 0.09 + bf * 0.08; // more visible in restored ocean stages
+
+        if (c.type === "fish")      this.drawBgFish(g, sx, sy, c.scale, c.dir, t, c.phase, alpha);
+        else if (c.type === "jelly") this.drawBgJelly(g, sx, sy, c.scale, t, c.phase, alpha);
+        else                         this.drawBgShark(g, sx, sy, c.scale, c.dir, alpha);
+      }
+    }
+  }
+
+  private drawBgFish(
+    g: Phaser.GameObjects.Graphics,
+    cx: number, cy: number, scale: number,
+    dir: 1 | -1, t: number, phase: number, alpha: number,
+  ): void {
+    const col = 0x78b4d4;
+    const count = 5;
+    for (let i = 0; i < count; i++) {
+      const fi = i - Math.floor(count / 2);
+      const fx = cx + fi * dir * 14 * scale;
+      const fy = cy + Math.abs(fi) * 5 * scale + Math.sin(t * 0.06 + phase + i * 1.1) * 2.5;
+
+      // Body ellipse
+      g.fillStyle(col, alpha);
+      g.fillEllipse(fx, fy, 13 * scale, 5 * scale);
+
+      // Tail triangle
+      const tailX = fx - dir * 7 * scale;
+      g.beginPath();
+      g.moveTo(tailX, fy - 4 * scale);
+      g.lineTo(tailX - dir * 5 * scale, fy);
+      g.lineTo(tailX, fy + 4 * scale);
+      g.closePath();
+      g.fillPath();
+    }
+  }
+
+  private drawBgJelly(
+    g: Phaser.GameObjects.Graphics,
+    cx: number, cy: number, scale: number,
+    t: number, phase: number, alpha: number,
+  ): void {
+    const col = 0x5878c0;
+    const pulse = 1 + Math.sin(t * 0.055 + phase) * 0.10;
+    const bw = 22 * scale * pulse;
+    const bh = 12 * scale;
+
+    // Pulsing bell
+    g.fillStyle(col, alpha * 0.85);
+    g.fillEllipse(cx, cy, bw, bh);
+
+    // Tentacles
+    g.lineStyle(1, col, alpha * 0.65);
+    for (let i = 0; i < 4; i++) {
+      const tx = cx + (i - 1.5) * 5 * scale;
+      const tLen = (10 + (i % 2) * 5) * scale;
+      const wobble = Math.sin(t * 0.04 + phase + i * 0.9) * 2.5 * scale;
+      g.beginPath();
+      g.moveTo(tx, cy + bh / 2);
+      g.lineTo(tx + wobble, cy + bh / 2 + tLen);
+      g.strokePath();
+    }
+  }
+
+  private drawBgShark(
+    g: Phaser.GameObjects.Graphics,
+    cx: number, cy: number, scale: number,
+    dir: 1 | -1, alpha: number,
+  ): void {
+    const col = 0x3a4e60;
+
+    // Body
+    g.fillStyle(col, alpha * 0.75);
+    g.fillEllipse(cx, cy, 62 * scale, 17 * scale);
+
+    // Dorsal fin
+    g.beginPath();
+    g.moveTo(cx + dir * 6 * scale, cy - 8 * scale);
+    g.lineTo(cx + dir * 16 * scale, cy - 23 * scale);
+    g.lineTo(cx + dir * 26 * scale, cy - 8 * scale);
+    g.closePath();
+    g.fillPath();
+
+    // Crescent tail
+    const tailX = cx - dir * 28 * scale;
+    g.beginPath();
+    g.moveTo(tailX, cy - 8 * scale);
+    g.lineTo(tailX - dir * 13 * scale, cy - 17 * scale);
+    g.lineTo(tailX, cy);
+    g.lineTo(tailX - dir * 13 * scale, cy + 17 * scale);
+    g.lineTo(tailX, cy + 8 * scale);
+    g.closePath();
+    g.fillPath();
   }
 }
