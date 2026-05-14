@@ -1,13 +1,14 @@
 /*
- * MainMenuScene — polished title screen.
+ * MainMenuScene — polished title screen with cinematic entrance animation.
  *
- * Features:
- *  - Animated ocean background with parallax + bubbles
- *  - Bobbing turtle skin preview (selected skin)
- *  - Logo, high score, and tagline
- *  - Play, Settings, Achievements, Skins buttons
- *  - Daily challenge badge
- *  - Ocean music starts here
+ * Entrance sequence:
+ *   0 ms   — "OCEAN" drops from above with Back.easeOut bounce
+ *   180 ms — "SURVIVOR" rises from below, meets it in the middle
+ *   720 ms — blue camera flash at landing impact
+ *   750 ms — turtle + tagline + badge fade in
+ *   900 ms — play button pops in (Back.easeOut scale), then pulses
+ *   1050 ms — secondary buttons slide up with stagger
+ *   ongoing — title hue-cycles through ocean colours + slow breathe
  */
 
 import Phaser from "phaser";
@@ -38,6 +39,13 @@ export class MainMenuScene extends Phaser.Scene {
   private scrollX = 0;
   private tick = 0;
 
+  // Title refs for animation
+  private oceanText!: Phaser.GameObjects.Text;
+  private survivorText!: Phaser.GameObjects.Text;
+
+  // Items to fade in after landing
+  private fadeGroup: Phaser.GameObjects.GameObject[] = [];
+
   constructor() { super(SCENE.MAIN_MENU); }
 
   create(): void {
@@ -45,17 +53,14 @@ export class MainMenuScene extends Phaser.Scene {
     this.fxGfx = this.add.graphics().setDepth(1);
     this.turtleGfx = this.add.graphics().setDepth(10);
 
-    // Record today as a play day for streak tracking (idempotent — safe to call every visit)
     saveManager.recordPlayToday();
-
-    // Shift music to calm menu atmosphere (no-op if music hasn't started yet)
     soundManager.setMusicIntensity("menu");
 
     this.buildBgShapes();
     this.buildUI();
     this.drawBackground();
+    this.playIntroAnimation();
 
-    // Start music lazily (after any user interaction has unlocked AudioContext)
     this.input.once("pointerdown", () => soundManager.startMusic());
 
     emitSceneChange({ scene: "MainMenu" });
@@ -70,7 +75,6 @@ export class MainMenuScene extends Phaser.Scene {
     this.updateBubbles(dt);
     this.drawBackground();
 
-    // Bobbing turtle preview using current selected skin
     const bobY = Math.sin(time / 900) * 12;
     this.drawTurtle(GAME_WIDTH * 0.5, GAME_HEIGHT * 0.38 + bobY, time);
   }
@@ -109,40 +113,46 @@ export class MainMenuScene extends Phaser.Scene {
   private buildUI(): void {
     const cx = GAME_WIDTH / 2;
 
-    // Logo
-    this.add.text(cx, GAME_HEIGHT * 0.14, "OCEAN", {
+    // ── Title ────────────────────────────────────────────────────────────────
+    // Both start off-screen; playIntroAnimation() flies them in.
+
+    const titleY = GAME_HEIGHT * 0.14;
+
+    this.oceanText = this.add.text(cx, titleY - 130, "OCEAN", {
       fontSize: "56px", fontFamily: "Arial Black, Impact, sans-serif",
       color: "#00e8ff", stroke: "#003a60", strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(20);
+    }).setOrigin(0.5).setDepth(20).setAlpha(0);
 
-    this.add.text(cx, GAME_HEIGHT * 0.14 + 58, "SURVIVOR", {
+    this.survivorText = this.add.text(cx, titleY + 58 + 90, "SURVIVOR", {
       fontSize: "38px", fontFamily: "Arial Black, Impact, sans-serif",
       color: "#80ffe8", stroke: "#003a60", strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(20);
+    }).setOrigin(0.5).setDepth(20).setAlpha(0);
 
-    // High score
+    // ── Secondary info (fade-in group) ────────────────────────────────────────
+
     const hs = saveManager.highScore;
     if (hs > 0) {
-      this.add.text(cx, GAME_HEIGHT * 0.14 + 104, `Best: ${hs}`, {
+      const hsText = this.add.text(cx, titleY + 104, `Best: ${hs}`, {
         fontSize: "17px", fontFamily: "Arial, sans-serif",
         color: "#ffd84a", stroke: "#2a1800", strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(20);
+      }).setOrigin(0.5).setDepth(20).setAlpha(0);
+      this.fadeGroup.push(hsText);
     }
 
-    // Streak counter (only shown once player has a multi-day streak)
     const streak = saveManager.currentStreak;
     if (streak >= 2) {
-      this.add.text(cx, GAME_HEIGHT * 0.14 + 128, `\uD83D\uDD25 ${streak} day streak!`, {
+      const streakText = this.add.text(cx, titleY + 128, `\uD83D\uDD25 ${streak} day streak!`, {
         fontSize: "13px", fontFamily: "Arial, sans-serif",
         color: "#ff9f3f", stroke: "#2a0800", strokeThickness: 2,
-      }).setOrigin(0.5).setDepth(20);
+      }).setOrigin(0.5).setDepth(20).setAlpha(0);
+      this.fadeGroup.push(streakText);
     }
 
-    // Tagline below turtle
-    this.add.text(cx, GAME_HEIGHT * 0.58, "Help the turtle clean up the ocean", {
+    const tagline = this.add.text(cx, GAME_HEIGHT * 0.58, "Help the turtle clean up the ocean", {
       fontSize: "13px", fontFamily: "Arial, sans-serif",
       color: "rgba(160,220,255,0.65)", align: "center",
-    }).setOrigin(0.5).setDepth(20);
+    }).setOrigin(0.5).setDepth(20).setAlpha(0);
+    this.fadeGroup.push(tagline);
 
     // ── Daily challenge badge ──────────────────────────────────────────────────
 
@@ -155,29 +165,32 @@ export class MainMenuScene extends Phaser.Scene {
     const badgeW = 320;
     const badgeX = cx - badgeW / 2;
 
-    const badgeG = this.add.graphics().setDepth(18);
+    const badgeG = this.add.graphics().setDepth(18).setAlpha(0);
     badgeG.fillStyle(dcDone ? 0x0a2818 : 0x0a1828, 0.88);
     badgeG.fillRoundedRect(badgeX, badgeY, badgeW, 52, 10);
     badgeG.lineStyle(1.5, dcDone ? 0x00a050 : 0x1e4060, 0.8);
     badgeG.strokeRoundedRect(badgeX, badgeY, badgeW, 52, 10);
+    this.fadeGroup.push(badgeG);
 
-    this.add.text(badgeX + 18, badgeY + 10, `${dc.icon}  DAILY`, {
+    const dcLabel = this.add.text(badgeX + 18, badgeY + 10, `${dc.icon}  DAILY`, {
       fontSize: "10px", fontFamily: "Arial, sans-serif",
       color: "rgba(100,180,220,0.7)", letterSpacing: 2,
-    }).setOrigin(0, 0).setDepth(20);
+    }).setOrigin(0, 0).setDepth(20).setAlpha(0);
+    this.fadeGroup.push(dcLabel);
 
-    this.add.text(badgeX + 18, badgeY + 26, dc.description, {
+    const dcDesc = this.add.text(badgeX + 18, badgeY + 26, dc.description, {
       fontSize: "12px", fontFamily: "Arial, sans-serif",
       color: dcDone ? "#80ffcc" : "#c0e0ff",
-    }).setOrigin(0, 0).setDepth(20);
+    }).setOrigin(0, 0).setDepth(20).setAlpha(0);
+    this.fadeGroup.push(dcDesc);
 
     if (dcDone) {
-      this.add.text(badgeX + badgeW - 16, badgeY + 26, "✓ Done!", {
+      const dcCheck = this.add.text(badgeX + badgeW - 16, badgeY + 26, "✓ Done!", {
         fontSize: "12px", fontFamily: "Arial, sans-serif",
         color: "#00e080",
-      }).setOrigin(1, 0).setDepth(20);
+      }).setOrigin(1, 0).setDepth(20).setAlpha(0);
+      this.fadeGroup.push(dcCheck);
     } else if (dcFrac > 0) {
-      // Progress bar
       const pbX = badgeX + badgeW - 70;
       const pbY = badgeY + 30;
       const pbW = 60;
@@ -193,19 +206,13 @@ export class MainMenuScene extends Phaser.Scene {
       fontSize: "20px", fontFamily: "Arial Black, sans-serif",
       color: "#ffffff", backgroundColor: "#0e6e30",
       padding: { x: 34, y: 14 }, stroke: "#083018", strokeThickness: 3,
-    }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setDepth(20)
+      .setScale(0).setAlpha(0)
+      .setInteractive({ useHandCursor: true });
 
     playBtn.on("pointerdown", () => this.startGame());
     playBtn.on("pointerover", () => playBtn.setStyle({ color: "#a0ffc0" }));
     playBtn.on("pointerout",  () => playBtn.setStyle({ color: "#ffffff" }));
-
-    // Pulsing glow on play button
-    this.tweens.add({
-      targets: playBtn,
-      scaleX: 1.04, scaleY: 1.04,
-      yoyo: true, repeat: -1,
-      duration: 800, ease: "Sine.easeInOut",
-    });
 
     // ── Secondary buttons ──────────────────────────────────────────────────────
 
@@ -217,19 +224,18 @@ export class MainMenuScene extends Phaser.Scene {
     };
 
     const skinsBtn = this.add.text(cx - 112, btnY, "🐢  SKINS", btnStyle)
-      .setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
+      .setOrigin(0.5).setDepth(20).setAlpha(0).setInteractive({ useHandCursor: true });
 
     const achBtn = this.add.text(cx, btnY, "🏆  AWARDS", btnStyle)
-      .setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
+      .setOrigin(0.5).setDepth(20).setAlpha(0).setInteractive({ useHandCursor: true });
 
     const settingsBtn = this.add.text(cx + 112, btnY, "⚙  OPTIONS", btnStyle)
-      .setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
+      .setOrigin(0.5).setDepth(20).setAlpha(0).setInteractive({ useHandCursor: true });
 
-    // Leaderboard button — second row, centred
     const lbBtn = this.add.text(cx, btnY + 38, "🌍  SCORES", {
       ...btnStyle,
       color: "#ffd84a", backgroundColor: "#1a1200",
-    }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setDepth(20).setAlpha(0).setInteractive({ useHandCursor: true });
 
     const hover = (btn: Phaser.GameObjects.Text) => {
       btn.on("pointerover", () => btn.setStyle({ color: "#c0e8ff" }));
@@ -264,7 +270,168 @@ export class MainMenuScene extends Phaser.Scene {
       soundManager.playTap();
       emitOpenLeaderboard();
     });
+
+    // Store for animation
+    this._playBtn = playBtn;
+    this._secBtns = [skinsBtn, achBtn, settingsBtn, lbBtn];
   }
+
+  // Stored refs set during buildUI, used by playIntroAnimation
+  private _playBtn!: Phaser.GameObjects.Text;
+  private _secBtns: Phaser.GameObjects.Text[] = [];
+
+  // ── Cinematic entrance ────────────────────────────────────────────────────────
+
+  private playIntroAnimation(): void {
+    const titleY = GAME_HEIGHT * 0.14;
+
+    // ── Phase 1: "OCEAN" crashes down ──────────────────────────────────────────
+    this.tweens.add({
+      targets: this.oceanText,
+      y: titleY,
+      alpha: 1,
+      duration: 680,
+      delay: 80,
+      ease: "Back.easeOut",
+      easeParams: [2.0],
+    });
+
+    // ── Phase 2: "SURVIVOR" rises up to meet it ────────────────────────────────
+    this.tweens.add({
+      targets: this.survivorText,
+      y: titleY + 58,
+      alpha: 1,
+      duration: 560,
+      delay: 230,
+      ease: "Back.easeOut",
+      easeParams: [1.5],
+    });
+
+    // ── Phase 3: Impact flash at landing (≈ 760ms) ─────────────────────────────
+    this.time.delayedCall(760, () => {
+      this.cameras.main.flash(220, 30, 160, 255, false);
+
+      // Punch scale — both texts briefly enlarge then snap back
+      for (const t of [this.oceanText, this.survivorText]) {
+        this.tweens.add({
+          targets: t,
+          scaleX: 1.10, scaleY: 1.10,
+          duration: 100,
+          ease: "Quart.easeOut",
+          yoyo: true,
+        });
+      }
+    });
+
+    // ── Phase 4: Fade in secondary info (tagline, badge, score) ───────────────
+    this.time.delayedCall(750, () => {
+      this.tweens.add({
+        targets: this.fadeGroup,
+        alpha: 1,
+        duration: 450,
+        ease: "Sine.easeOut",
+      });
+    });
+
+    // ── Phase 5: Play button pop-in ────────────────────────────────────────────
+    this.time.delayedCall(900, () => {
+      this.tweens.add({
+        targets: this._playBtn,
+        scale: 1,
+        alpha: 1,
+        duration: 480,
+        ease: "Back.easeOut",
+        easeParams: [2.6],
+        onComplete: () => {
+          // Begin the continuous pulse only after it has fully appeared
+          this.tweens.add({
+            targets: this._playBtn,
+            scaleX: 1.045, scaleY: 1.045,
+            yoyo: true, repeat: -1,
+            duration: 820,
+            ease: "Sine.easeInOut",
+          });
+        },
+      });
+    });
+
+    // ── Phase 6: Secondary buttons slide up with stagger ───────────────────────
+    this.time.delayedCall(1050, () => {
+      this._secBtns.forEach((btn, i) => {
+        this.tweens.add({
+          targets: btn,
+          alpha: 1,
+          y: btn.y - 16,
+          duration: 360,
+          delay: i * 70,
+          ease: "Cubic.easeOut",
+        });
+      });
+    });
+
+    // ── Phase 7: Title ongoing shimmer + breathe ───────────────────────────────
+    // Hue cycles through deep cyan → aqua → teal for "OCEAN"
+    // and mint → pale-teal → mint for "SURVIVOR"
+    this.time.delayedCall(900, () => {
+      this.startTitleShimmer();
+    });
+  }
+
+  private startTitleShimmer(): void {
+    // "OCEAN" cycles hue 185° → 205° (cyan to blue-cyan)
+    this.tweens.addCounter({
+      from: 185, to: 205,
+      duration: 2600,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+      onUpdate: (tween) => {
+        const h = (tween.getValue() ?? 185) / 360;
+        const rgb = Phaser.Display.Color.HSVToRGB(h, 0.88, 1.0) as { r: number; g: number; b: number };
+        const hex = "#" + Phaser.Display.Color.ComponentToHex(rgb.r)
+                        + Phaser.Display.Color.ComponentToHex(rgb.g)
+                        + Phaser.Display.Color.ComponentToHex(rgb.b);
+        this.oceanText.setStyle({ color: hex });
+      },
+    });
+
+    // "SURVIVOR" cycles hue 160° → 175° (mint to seafoam)
+    this.tweens.addCounter({
+      from: 160, to: 175,
+      duration: 3100,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+      onUpdate: (tween) => {
+        const h = (tween.getValue() ?? 160) / 360;
+        const rgb = Phaser.Display.Color.HSVToRGB(h, 0.55, 1.0) as { r: number; g: number; b: number };
+        const hex = "#" + Phaser.Display.Color.ComponentToHex(rgb.r)
+                        + Phaser.Display.Color.ComponentToHex(rgb.g)
+                        + Phaser.Display.Color.ComponentToHex(rgb.b);
+        this.survivorText.setStyle({ color: hex });
+      },
+    });
+
+    // Slow scale-breathe on both — slightly out of phase for organic feel
+    this.tweens.add({
+      targets: this.oceanText,
+      scaleX: 1.018, scaleY: 1.018,
+      yoyo: true, repeat: -1,
+      duration: 2200,
+      ease: "Sine.easeInOut",
+    });
+
+    this.tweens.add({
+      targets: this.survivorText,
+      scaleX: 1.014, scaleY: 1.014,
+      yoyo: true, repeat: -1,
+      duration: 2700,
+      delay: 400,
+      ease: "Sine.easeInOut",
+    });
+  }
+
+  // ── Background ────────────────────────────────────────────────────────────────
 
   private spawnBubbles(dt: number): void {
     if (Math.random() < 6 * dt) {
