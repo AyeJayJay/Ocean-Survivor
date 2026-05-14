@@ -1,0 +1,185 @@
+You are a senior iOS App Store compliance engineer, mobile UX auditor, and web app optimization expert.
+
+I have a browser-based game/website that I want to package and publish as an iOS app using a WebView wrapper (Capacitor, Cordova, WKWebView, or similar). Your job is to perform a FULL App Store approval readiness audit and identify every issue that could cause rejection, poor performance, crashes, bad UX, security concerns, or low-quality app experience.
+
+Audit the ENTIRE project carefully.
+
+Your Tasks
+1. App Store Guideline Compliance Audit
+
+Check for anything that may violate Apple App Store Review Guidelines, including but not limited to:
+
+Broken links
+Placeholder content
+Fake buttons
+Empty pages
+Poor mobile responsiveness
+Excessive ads/popups
+Web-only experience with no native feel
+Missing legal pages
+Missing privacy disclosures
+Misleading purchases
+Spam-like behavior
+Crashes/freezes
+Low-quality UI
+Slow loading
+Unsafe external links
+Copyright/trademark issues
+Login/account problems
+Incomplete features
+Excessive permissions
+Gambling/adult/restricted content
+NFT/crypto/payment compliance risks
+Cookie/privacy issues
+Accessibility problems
+
+Reference current Apple review expectations.
+
+2. Mobile & iPhone Optimization Audit
+
+Test and report issues for:
+
+iPhone responsiveness
+Safe-area handling (Dynamic Island/notch)
+Touch targets
+Font readability
+Scroll problems
+Orientation bugs
+Keyboard overlap
+Mobile performance
+Battery usage
+Lag/frame drops
+Audio handling
+Fullscreen support
+Safari/WKWebView compatibility
+Offline handling
+Gesture conflicts
+Retina quality assets
+3. PWA/WebView Readiness Audit
+
+Determine if the app is suitable for:
+
+Capacitor
+Cordova
+WKWebView
+PWA-to-iOS conversion
+
+Identify:
+
+Unsupported browser APIs
+Cross-origin issues
+Local storage/session issues
+Service worker issues
+Permissions handling
+Push notification limitations
+File upload problems
+Audio autoplay restrictions
+WebGL or canvas concerns
+App lifecycle issues
+4. Performance Audit
+
+Analyze:
+
+Large assets
+Unoptimized images
+Memory leaks
+Excessive JavaScript execution
+FPS/performance issues
+Bundle size
+Render blocking
+API inefficiencies
+Mobile network performance
+Loading times
+
+Recommend exact fixes.
+
+5. Security Audit
+
+Check for:
+
+Exposed API keys
+Insecure storage
+Unsafe authentication
+XSS risks
+Open redirects
+Vulnerable dependencies
+Client-side secrets
+Weak validation
+Unsafe third-party scripts
+
+Provide severity levels:
+
+Critical
+High
+Medium
+Low
+6. UX & App Quality Audit
+
+Evaluate whether this feels like a REAL iOS app rather than just a website in a wrapper.
+
+Identify:
+
+Areas needing native-like polish
+Missing onboarding
+Weak navigation
+Confusing UI
+Poor transitions
+Weak loading states
+Accessibility issues
+Missing haptics/native integrations
+Poor menu systems
+Areas Apple reviewers may consider “minimal functionality”
+7. Required App Store Items
+
+Tell me if I am missing:
+
+Privacy Policy
+Terms of Service
+Account deletion flow
+Restore purchases
+Permission usage descriptions
+App icons
+Splash screens
+Metadata requirements
+Age rating concerns
+ATT/Tracking disclosures
+8. Final Approval Probability Score
+
+At the end provide:
+
+Estimated App Store approval probability (0–100%)
+Top rejection risks
+Top performance risks
+Top UX improvements
+Required fixes before submission
+Recommended “nice-to-have” improvements
+Output Format
+
+Use this exact structure:
+
+Executive Summary
+Critical Issues
+High Priority Issues
+Medium Priority Issues
+Low Priority Issues
+iOS UX Improvements
+App Store Compliance Risks
+Performance Improvements
+Security Risks
+WebView/PWA Compatibility Issues
+Missing Legal/Metadata Requirements
+Final Approval Score
+Step-by-Step Fix Plan
+
+For every issue include:
+
+Description
+Why it matters
+Exact file/component affected
+Recommended fix
+Severity
+Estimated rejection risk
+
+Be extremely strict and detailed, similar to a real Apple App Review process.
+
+Analyze EVERYTHING deeply before answering.
