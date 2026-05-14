@@ -32,6 +32,8 @@ export interface SaveData {
   adConsentGiven: boolean | null;  // null = not yet asked, true = accepted, false = declined
   streakDays: number;       // consecutive days played
   lastPlayedDate: string;   // ISO date "YYYY-MM-DD" of last recorded play
+  hasSeenTutorial: boolean; // true after first tutorial dismissal
+  displayName: string;      // player display name for leaderboard (max 20 chars)
 }
 
 const SAVE_KEY = "os_save_v2";
@@ -56,6 +58,8 @@ const DEFAULT_SAVE: SaveData = {
   adConsentGiven: null,
   streakDays: 0,
   lastPlayedDate: "",
+  hasSeenTutorial: false,
+  displayName: "",
 };
 
 class SaveManager {
@@ -73,6 +77,8 @@ class SaveManager {
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<SaveData>;
         if (parsed.version === CURRENT_VERSION) {
+          // Spread DEFAULT_SAVE first so new fields (hasSeenTutorial, displayName)
+          // are populated even on saves written before they were added.
           return { ...DEFAULT_SAVE, ...parsed };
         }
       }
@@ -128,6 +134,8 @@ class SaveManager {
   get bestRunShells(): number { return this.data.bestRunShells; }
   get adConsentGiven(): boolean | null { return this.data.adConsentGiven ?? null; }
   get currentStreak(): number { return this.data.streakDays; }
+  get hasSeenTutorial(): boolean { return this.data.hasSeenTutorial; }
+  get displayName(): string { return this.data.displayName; }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
@@ -191,6 +199,16 @@ class SaveManager {
 
   setAdConsent(given: boolean): void {
     this.data.adConsentGiven = given;
+    this.commit();
+  }
+
+  setTutorialSeen(): void {
+    this.data.hasSeenTutorial = true;
+    this.commit();
+  }
+
+  setDisplayName(name: string): void {
+    this.data.displayName = name.trim().slice(0, 20);
     this.commit();
   }
 

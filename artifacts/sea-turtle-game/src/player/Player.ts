@@ -66,6 +66,7 @@ export class Player {
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocityY(-200); // small death bounce
     body.setGravityY(GRAVITY_Y * 0.6);
+
     // Expressive death spin — makes death memorable and clip-worthy
     this.sprite.scene.tweens.add({
       targets: this.gfx,
@@ -73,6 +74,9 @@ export class Player {
       duration: 700,
       ease: "Power2",
     });
+
+    // Debris particle burst — visual "impact" moment
+    this.spawnDeathParticles();
   }
 
   revive(atY: number): void {
@@ -126,13 +130,65 @@ export class Player {
   }
 
   // ── Skin drawing ──────────────────────────────────────────────────────────────
-  //
-  // Reads the currently selected skin from SaveManager and delegates to the
-  // skin's draw function. All skin coordinates are in local space (turtle centre).
 
   private drawSkin(): void {
     const skinId = saveManager.selectedSkin;
     const skin = getSkinDef(skinId);
     skin.drawFn(this.gfx);
+  }
+
+  // ── Death particles ───────────────────────────────────────────────────────────
+  //
+  // 14 small debris dots burst outward from the player's position on death.
+  // Colors are deliberately varied — ocean debris has many hues.
+
+  private spawnDeathParticles(): void {
+    const scene = this.sprite.scene;
+    const cx = this.sprite.x;
+    const cy = this.sprite.y;
+
+    // Ocean debris palette: pollution colors + ocean blues
+    const colors = [0xff6040, 0x60d0ff, 0xffd84a, 0xff9060, 0x40ffcc, 0xffffff, 0xff4488, 0xa0e0ff];
+
+    for (let i = 0; i < 14; i++) {
+      const angle = (i / 14) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+      const dist  = 38 + Math.random() * 52;
+      const radius = 2.5 + Math.random() * 3;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const delay = Math.random() * 60;
+
+      const dot = scene.add.graphics().setDepth(22);
+      dot.fillStyle(color, 0.92);
+      dot.fillCircle(0, 0, radius);
+      dot.setPosition(cx, cy);
+
+      scene.tweens.add({
+        targets: dot,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        alpha: 0,
+        scaleX: 0.15,
+        scaleY: 0.15,
+        duration: 480 + Math.random() * 280,
+        delay,
+        ease: "Power2",
+        onComplete: () => dot.destroy(),
+      });
+    }
+
+    // Larger slow-floater (mimics a plastic bag drifting away)
+    const floater = scene.add.graphics().setDepth(21);
+    floater.fillStyle(0xffffff, 0.22);
+    floater.fillEllipse(0, 0, 18, 12);
+    floater.setPosition(cx, cy);
+    scene.tweens.add({
+      targets: floater,
+      x: cx + (Math.random() - 0.5) * 60,
+      y: cy - 60 - Math.random() * 40,
+      alpha: 0,
+      duration: 900,
+      ease: "Power1",
+      onComplete: () => floater.destroy(),
+    });
   }
 }

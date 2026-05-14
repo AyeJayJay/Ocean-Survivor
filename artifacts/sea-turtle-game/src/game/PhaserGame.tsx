@@ -13,8 +13,8 @@ import { GAME_WIDTH, GAME_HEIGHT } from "./GameConfig";
 /*
  * PhaserGame — mounts the Phaser.Game inside the provided container div.
  *
- * The container must have an explicit pixel size so Phaser's Scale.NONE mode
- * renders the canvas at exactly that size (React handles the outer scaling).
+ * Waits for web fonts (Bangers, Nunito) to be available before creating the
+ * game so Phaser's text objects render with the correct typeface on first draw.
  *
  * Cleanup: destroys the Phaser.Game instance when the component unmounts to
  * prevent canvas / WebGL context leaks.
@@ -33,6 +33,9 @@ export function createPhaserGame(container: HTMLElement): Phaser.Game {
   }
 
   const config: Phaser.Types.Core.GameConfig = {
+    // Use WebGL when available (preferred for performance on iOS/Android).
+    // Phaser.AUTO already prefers WebGL but we set it explicitly and add
+    // powerPreference so the GPU scheduler gives us the high-performance tier.
     type: Phaser.AUTO,
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
@@ -68,6 +71,7 @@ export function createPhaserGame(container: HTMLElement): Phaser.Game {
       antialias: true,
       pixelArt: false,
       roundPixels: false,
+      powerPreference: "high-performance",
     },
     disableContextMenu: true,
     transparent: false,
@@ -99,7 +103,13 @@ export default function PhaserGame({ containerRef }: Props) {
     if (!el || initialized.current) return;
     initialized.current = true;
 
-    createPhaserGame(el);
+    // Wait for web fonts (Bangers, Nunito) before creating the game instance
+    // so Phaser text objects render with the correct typeface on first frame.
+    document.fonts.ready.then(() => {
+      if (containerRef.current && initialized.current) {
+        createPhaserGame(containerRef.current);
+      }
+    });
 
     return () => {
       initialized.current = false;

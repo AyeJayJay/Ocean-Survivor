@@ -119,13 +119,15 @@ export class MainMenuScene extends Phaser.Scene {
     const titleY = GAME_HEIGHT * 0.14;
 
     this.oceanText = this.add.text(cx, titleY - 130, "OCEAN", {
-      fontSize: "56px", fontFamily: "Arial Black, Impact, sans-serif",
+      fontSize: "64px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#00e8ff", stroke: "#003a60", strokeThickness: 6,
+      letterSpacing: 4,
     }).setOrigin(0.5).setDepth(20).setAlpha(0);
 
     this.survivorText = this.add.text(cx, titleY + 58 + 90, "SURVIVOR", {
-      fontSize: "38px", fontFamily: "Arial Black, Impact, sans-serif",
+      fontSize: "42px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#80ffe8", stroke: "#003a60", strokeThickness: 5,
+      letterSpacing: 3,
     }).setOrigin(0.5).setDepth(20).setAlpha(0);
 
     // ── Secondary info (fade-in group) ────────────────────────────────────────
@@ -203,9 +205,10 @@ export class MainMenuScene extends Phaser.Scene {
     // ── Play button ────────────────────────────────────────────────────────────
 
     const playBtn = this.add.text(cx, GAME_HEIGHT * 0.76, "▶  PLAY", {
-      fontSize: "20px", fontFamily: "Arial Black, sans-serif",
+      fontSize: "22px", fontFamily: "'Bangers', 'Arial Black', sans-serif",
       color: "#ffffff", backgroundColor: "#0e6e30",
       padding: { x: 34, y: 14 }, stroke: "#083018", strokeThickness: 3,
+      letterSpacing: 2,
     }).setOrigin(0.5).setDepth(20)
       .setScale(0).setAlpha(0)
       .setInteractive({ useHandCursor: true });

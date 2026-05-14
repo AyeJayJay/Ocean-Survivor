@@ -24,6 +24,8 @@ import {
 } from "./game/EventBus";
 import ScoreCard from "./components/ScoreCard";
 import LeaderboardModal from "./components/LeaderboardModal";
+import LoadingScreen from "./components/LoadingScreen";
+import TutorialOverlay from "./components/TutorialOverlay";
 import { GAME_WIDTH, GAME_HEIGHT } from "./game/GameConfig";
 
 // Set to true once an LLC is established and Stripe donations are ready
@@ -77,13 +79,14 @@ function AchievementToast({ toast, onDone }: { toast: ToastData; onDone: () => v
       <span style={{ fontSize: 24 }}>{toast.icon}</span>
       <div>
         <div style={{
-          fontSize: 10, fontFamily: "Arial, sans-serif",
+          fontSize: 10, fontFamily: "'Nunito', Arial, sans-serif",
           color: "rgba(100,200,150,0.7)", letterSpacing: 2, marginBottom: 2,
         }}>
           ACHIEVEMENT UNLOCKED
         </div>
         <div style={{
-          fontSize: 14, fontFamily: "Arial Black, sans-serif",
+          fontSize: 14, fontFamily: "'Nunito', 'Arial Black', sans-serif",
+          fontWeight: 800,
           color: "#80ffcc",
         }}>
           {toast.name}
@@ -123,23 +126,29 @@ function GameShell() {
   const [scoreCardData, setScoreCardData] = useState<ScoreCardPayload | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
-  // ── Back-button handler (Android) — prevent accidental exit ──────────────────
-  // Capacitor/WebView surfaces Android back-button as a popstate or a custom
-  // 'backbutton' event. We intercept it to keep players in the game.
+  // ── Loading screen state ──────────────────────────────────────────────────────
+  // Shown until Phaser's MainMenu scene fires for the first time.
+  const [phaserReady, setPhaserReady] = useState(false);
+  const phaserReadyRef = useRef(false); // stable ref for use inside callbacks
+
+  // ── Tutorial overlay ──────────────────────────────────────────────────────────
+  // Shown on the first ever visit to MainMenu (saved to localStorage).
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // ── Back-button handler (Android) ─────────────────────────────────────────────
   useEffect(() => {
     const handleBackButton = (e: Event) => { e.preventDefault(); };
     document.addEventListener("backbutton", handleBackButton, false);
     return () => document.removeEventListener("backbutton", handleBackButton, false);
   }, []);
 
-  // ── Ad consent + AdMob init on mount ─────────────────────────────────────────
+  // ── Ad consent + AdMob init on mount ──────────────────────────────────────────
 
   useEffect(() => {
     const consent = saveManager.adConsentGiven;
     if (consent === null) {
       setShowAdConsent(true);
     } else {
-      // Initialize for both personalized (true) and basic/non-personalized (false)
       AdmobBridge.initialize(consent === true).catch(() => {});
     }
   }, []);
@@ -147,6 +156,17 @@ function GameShell() {
   const handleConsentDone = useCallback(() => {
     setShowAdConsent(false);
   }, []);
+
+  // ── Dismiss loading screen once Phaser is ready ───────────────────────────────
+
+  useEffect(() => {
+    if (phaserReady) {
+      const dismiss = (window as unknown as Record<string, unknown>).__dismissLoadingScreen;
+      if (typeof dismiss === "function") {
+        (dismiss as () => void)();
+      }
+    }
+  }, [phaserReady]);
 
   // ── Resize handler ────────────────────────────────────────────────────────────
 
@@ -156,7 +176,7 @@ function GameShell() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ── EventBus listeners ───────────────────────────────────────────────────────
+  // ── EventBus listeners ────────────────────────────────────────────────────────
 
   useEffect(() => {
     const offState = onGameState((payload: GameStatePayload) => {
@@ -174,6 +194,18 @@ function GameShell() {
 
     const offScene = onSceneChange((payload: ScenePayload) => {
       setActiveScene(payload.scene);
+
+      // First time MainMenu fires → Phaser is ready, dismiss loading screen
+      if (payload.scene === "MainMenu" && !phaserReadyRef.current) {
+        phaserReadyRef.current = true;
+        setPhaserReady(true);
+
+        // Show tutorial on first ever visit
+        if (!saveManager.hasSeenTutorial) {
+          // Brief delay so the MainMenu entrance animation has started
+          setTimeout(() => setShowTutorial(true), 600);
+        }
+      }
 
       if (payload.scene === "GameOver") {
         const decision = adFrequencyManager.canShowInterstitial();
@@ -204,41 +236,38 @@ function GameShell() {
       }
     });
 
-    // Navigate to /privacy — accessible as a real URL on web and full-screen
-    // within the Capacitor WebView on native.
     const offPrivacy = onPrivacyPolicy(() => {
       navigate("/privacy");
     });
 
-    // Re-show the consent modal so players can change their ad preference.
     const offAdPrefs = onAdPreferences(() => {
       setShowAdConsent(true);
     });
 
-    // Navigate to /about (About & Terms screen).
     const offAbout = onAbout(() => {
       navigate("/about");
     });
 
-    // Score card overlay
     const offScoreCard = onShowScoreCard((payload) => {
       setScoreCardData(payload);
       setShowScoreCard(true);
     });
 
-    // Leaderboard overlay
     const offLeaderboard = onOpenLeaderboard(() => {
       setShowLeaderboard(true);
     });
 
-    return () => { offState(); offScene(); offToast(); offGameOverAd(); offPrivacy(); offAdPrefs(); offAbout(); offScoreCard(); offLeaderboard(); };
+    return () => {
+      offState(); offScene(); offToast(); offGameOverAd();
+      offPrivacy(); offAdPrefs(); offAbout(); offScoreCard(); offLeaderboard();
+    };
   }, [navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeToast = useCallback((key: number) => {
     setToasts(prev => prev.filter(t => t.key !== key));
   }, []);
 
-  // ── Ad handlers ──────────────────────────────────────────────────────────────
+  // ── Ad handlers ───────────────────────────────────────────────────────────────
 
   const handleWatchAd = useCallback(() => {
     analytics.track("rewarded_preroll_shown");
@@ -307,6 +336,9 @@ function GameShell() {
         * { box-sizing: border-box; }
       `}</style>
 
+      {/* Loading screen — covers whole viewport (fixed), shown until Phaser boots */}
+      <LoadingScreen />
+
       <div style={{
         position: "relative",
         width: GAME_WIDTH,
@@ -321,6 +353,11 @@ function GameShell() {
       }}>
         <div ref={phaserContainerRef} style={{ position: "absolute", inset: 0 }} />
         <PhaserGame containerRef={phaserContainerRef} />
+
+        {/* First-run tutorial overlay (inside game viewport, scales with game) */}
+        {showTutorial && activeScene === "MainMenu" && (
+          <TutorialOverlay onDone={() => setShowTutorial(false)} />
+        )}
 
         {toasts.map((toast) => (
           <AchievementToast
@@ -353,7 +390,7 @@ function GameShell() {
                   padding: "14px 32px",
                   fontSize: 15,
                   fontWeight: 700,
-                  fontFamily: "Arial, sans-serif",
+                  fontFamily: "'Nunito', Arial, sans-serif",
                   cursor: "pointer",
                   marginBottom: 12,
                   width: 300,
@@ -374,7 +411,7 @@ function GameShell() {
                 color: "rgba(255,255,255,0.65)",
                 padding: "10px 28px",
                 fontSize: 13,
-                fontFamily: "Arial, sans-serif",
+                fontFamily: "'Nunito', Arial, sans-serif",
                 cursor: "pointer",
                 width: 200,
               }}
@@ -454,7 +491,7 @@ function GameShell() {
   );
 }
 
-// ── App — top-level router ────────────────────────────────────────────────────
+// ── App — top-level router ─────────────────────────────────────────────────────
 
 export default function App() {
   return (

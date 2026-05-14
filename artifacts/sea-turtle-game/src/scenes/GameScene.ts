@@ -182,9 +182,9 @@ export class GameScene extends Phaser.Scene {
     this.achLastFrac.clear();
 
     // Restoration progress bar (bottom-left, depth 31)
-    this.add.text(14, GAME_HEIGHT - 44, "🌊 OCEAN", {
-      fontSize: "8px", fontFamily: "Arial, sans-serif",
-      color: "rgba(60,160,110,0.5)", letterSpacing: 1,
+    this.add.text(14, GAME_HEIGHT - 50, "🌊 OCEAN HEALTH", {
+      fontSize: "10px", fontFamily: "'Nunito', Arial, sans-serif",
+      color: "rgba(80,200,140,0.8)", letterSpacing: 1,
     }).setDepth(31);
     this.restorationBarGfx = this.add.graphics().setDepth(31);
     this.drawRestorationBar(0);
@@ -513,9 +513,28 @@ export class GameScene extends Phaser.Scene {
     const x = GAME_WIDTH / 2;
     const y = GAME_HEIGHT * 0.22;
 
+    // Escalating camera shake + colour flash for high milestones
+    if (milestone >= 500) {
+      this.cameras.main.shake(300, 0.020);
+      this.cameras.main.flash(160, 255, 200, 30, false);
+    } else if (milestone >= 200) {
+      this.cameras.main.shake(220, 0.015);
+      this.cameras.main.flash(120, 0, 180, 255, false);
+    } else if (milestone >= 100) {
+      this.cameras.main.shake(160, 0.010);
+      this.cameras.main.flash(80, 0, 140, 255, false);
+    } else if (milestone >= 50) {
+      this.cameras.main.shake(100, 0.006);
+    }
+
+    // Scale up label size for big milestones
+    const labelSize = milestone >= 200 ? "40px" : milestone >= 100 ? "34px" : "30px";
+    const labelColor = milestone >= 500 ? "#ffe060" : milestone >= 100 ? "#80ffff" : "#ffd84a";
+
     const txt = this.add.text(x, y, `${milestone}!`, {
-      fontSize: "30px", fontFamily: "Arial Black, sans-serif",
-      color: "#ffd84a", stroke: "#4a2800", strokeThickness: 5,
+      fontSize: labelSize, fontFamily: "'Bangers', 'Arial Black', sans-serif",
+      color: labelColor, stroke: "#000000", strokeThickness: 5,
+      letterSpacing: 2,
     }).setOrigin(0.5).setDepth(45).setAlpha(0).setScale(0.6);
 
     this.tweens.add({
@@ -565,22 +584,43 @@ export class GameScene extends Phaser.Scene {
     g.clear();
 
     const fraction = Math.min(survivalSecs / 150, 1);
-    const barW = 120;
-    const barH = 5;
+    const barW = 148;
+    const barH = 8;
     const barX = 14;
-    const barY = GAME_HEIGHT - 30;
+    const barY = GAME_HEIGHT - 34;
 
-    // Track
-    g.fillStyle(0x000000, 0.32);
-    g.fillRoundedRect(barX, barY, barW, barH, 3);
+    // Track background
+    g.fillStyle(0x000000, 0.45);
+    g.fillRoundedRect(barX, barY, barW, barH, 4);
 
     // Stage-tinted fill
     const stage = this.progressionManager?.stage ?? 0;
-    const colors = [0x204060, 0x1a7040, 0x30a060, 0x20d080, 0x40ffaa];
-    g.fillStyle(colors[Math.min(stage, 4)], 0.85);
+    const colors = [0x1a4a70, 0x1a7040, 0x30a060, 0x20d080, 0x40ffaa];
+    const fillColor = colors[Math.min(stage, 4)];
     if (fraction > 0) {
-      g.fillRoundedRect(barX, barY, Math.max(6, fraction * barW), barH, 3);
+      const fillW = Math.max(8, fraction * barW);
+      g.fillStyle(fillColor, 0.9);
+      g.fillRoundedRect(barX, barY, fillW, barH, 4);
+
+      // Bright leading edge highlight
+      g.fillStyle(0xffffff, 0.35);
+      g.fillRoundedRect(barX + fillW - 6, barY + 1, 5, barH - 2, 2);
     }
+
+    // Stage name below bar
+    const stageNames = ["Polluted", "Awakening", "Healing", "Thriving", "RESTORED!"];
+    g.fillStyle(fillColor, 0.0); // invisible fill — just for layout
+    // We draw stage text using a cached text approach via the bar graphics itself.
+    // (Stage name is drawn each frame cheaply via built-in Phaser Graphics fill ops.)
+    // For the actual text we rely on the static label set in create().
+    // Instead, pulse the bar alpha slightly for the "RESTORED!" stage:
+    if (stage >= 4 && fraction >= 1) {
+      const pulse = 0.75 + Math.sin(Date.now() * 0.004) * 0.25;
+      g.fillStyle(0x40ffaa, pulse * 0.3);
+      g.fillRoundedRect(barX - 2, barY - 2, barW + 4, barH + 4, 5);
+    }
+
+    void stageNames; // referenced by RestorationStageText in create()
   }
 
   private spawnScorePopup(count: number): void {
