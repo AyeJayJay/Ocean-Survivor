@@ -14,6 +14,7 @@ import { dailyChallengeManager } from "../progression/DailyChallengeManager";
 import { saveManager } from "../save/SaveManager";
 import type { SkinId } from "../save/SaveManager";
 import { emitGameState, emitSceneChange, emitAchievementToast, onCommand } from "../game/EventBus";
+import { leaderboardService } from "../services/LeaderboardService";
 import { soundManager } from "../audio/SoundManager";
 import { analytics } from "../analytics/Analytics";
 
@@ -68,6 +69,11 @@ export class GameScene extends Phaser.Scene {
   private tick = 0;
   private seaCreatures: SeaCreature[] = [];
   private readonly BG_TILE_W = GAME_WIDTH * 2;
+
+  // Achievement progress mid-game HUD
+  private nextAchHudText!: Phaser.GameObjects.Text;
+  private nextAchHudBarGfx!: Phaser.GameObjects.Graphics;
+  private achLastFrac = new Map<string, number>();
 
   // HUD
   private scoreText!: Phaser.GameObjects.Text;
@@ -167,6 +173,14 @@ export class GameScene extends Phaser.Scene {
         color: "rgba(255,220,80,0.38)", stroke: "#000000", strokeThickness: 2,
       }).setOrigin(0.5).setDepth(30);
 
+    // Achievement progress hint (bottom-right, depth 31)
+    this.nextAchHudText = this.add.text(GAME_WIDTH - 14, GAME_HEIGHT - 60, "", {
+      fontSize: "10px", fontFamily: "Arial, sans-serif",
+      color: "rgba(140,190,255,0.5)",
+    }).setOrigin(1, 0).setDepth(31);
+    this.nextAchHudBarGfx = this.add.graphics().setDepth(31);
+    this.achLastFrac.clear();
+
     // Restoration progress bar (bottom-left, depth 31)
     this.add.text(14, GAME_HEIGHT - 44, "🌊 OCEAN", {
       fontSize: "8px", fontFamily: "Arial, sans-serif",
@@ -220,6 +234,7 @@ export class GameScene extends Phaser.Scene {
       this.reviveGfx?.destroy();
       this.pauseOverlayGfx?.destroy();
       this.restorationBarGfx?.destroy();
+      this.nextAchHudBarGfx?.destroy();
     }, this);
 
     emitSceneChange({ scene: "Game" });
@@ -290,6 +305,11 @@ export class GameScene extends Phaser.Scene {
 
       // Near-miss check
       this.checkNearMiss();
+
+      // Achievement progress mid-game (throttled ~1s)
+      if (this.tick % 60 === 0) {
+        this.updateAchievementProgress(this.score, this.obstacleManager.shellsCollected);
+      }
 
       // ── Invincibility shield ring ────────────────────────────────────────────
       this.reviveGfx.clear();
@@ -710,6 +730,9 @@ export class GameScene extends Phaser.Scene {
       duration_s: sessionDuration,
     });
 
+    // Submit to global leaderboard (fire-and-forget)
+    leaderboardService.submit(this.score, sessionShells);
+
     // Persist results first
     saveManager.recordGameOver(this.score, sessionShells);
     this.bestScore = saveManager.highScore;
@@ -874,6 +897,80 @@ export class GameScene extends Phaser.Scene {
       fx.lineStyle(1.2, bubbleColor, b.alpha);
       fx.strokeCircle(b.x, b.y, b.r);
     }
+  }
+
+  // ── Achievement progress mid-game ────────────────────────────────────────────
+
+  private updateAchievementProgress(score: number, shells: number): void {
+    // Achievements that can improve mid-run (score or shells in this session)
+    const candidates = [
+      { id: "shell_hunter",     label: "Shell Hunter",     icon: "🐚", value: shells, max: 10  },
+      { id: "speed_demon",      label: "Speed Demon",      icon: "⚡", value: score,  max: 50  },
+      { id: "ocean_guardian",   label: "Ocean Guardian",   icon: "🌊", value: score,  max: 150 },
+      { id: "veteran_survivor", label: "Veteran Survivor", icon: "🏆", value: score,  max: 300 },
+    ];
+
+    // Pick the closest uncompleted one with any progress
+    let best: { id: string; label: string; icon: string; frac: number; value: number; max: number } | null = null;
+    for (const c of candidates) {
+      if (achievementManager.isCompleted(c.id)) continue;
+      const frac = Math.min(c.value / c.max, 1);
+      if (frac <= 0) continue;
+      if (!best || frac > best.frac) best = { ...c, frac };
+    }
+
+    if (!best || best.frac >= 1) {
+      this.nextAchHudText.setText("");
+      this.nextAchHudBarGfx.clear();
+      return;
+    }
+
+    // Update text hint
+    this.nextAchHudText.setText(`${best.icon} ${best.label}  ${best.value}/${best.max}`);
+
+    // Progress bar (right-aligned, above the text)
+    this.nextAchHudBarGfx.clear();
+    const bw = 110;
+    const bx = GAME_WIDTH - 14 - bw;
+    const by = GAME_HEIGHT - 47;
+    this.nextAchHudBarGfx.fillStyle(0x102030, 0.7);
+    this.nextAchHudBarGfx.fillRoundedRect(bx, by, bw, 3, 1.5);
+    this.nextAchHudBarGfx.fillStyle(0x3090e0, 0.7);
+    this.nextAchHudBarGfx.fillRoundedRect(bx, by, Math.max(3, best.frac * bw), 3, 1.5);
+
+    // Popup when crossing 50%, 75%, 90%
+    const prevFrac = this.achLastFrac.get(best.id) ?? 0;
+    for (const threshold of [0.5, 0.75, 0.9]) {
+      if (prevFrac < threshold && best.frac >= threshold) {
+        this.showAchievementProgressPopup(best.icon, best.label, best.frac);
+        break;
+      }
+    }
+    this.achLastFrac.set(best.id, best.frac);
+  }
+
+  private showAchievementProgressPopup(icon: string, name: string, frac: number): void {
+    const pct = Math.round(frac * 100);
+    const txt = this.add.text(
+      GAME_WIDTH / 2, GAME_HEIGHT * 0.42,
+      `${icon}  ${name}  ${pct}%`,
+      {
+        fontSize: "16px", fontFamily: "Arial Black, sans-serif",
+        color: "#80d8ff", stroke: "#001830", strokeThickness: 4,
+      },
+    ).setOrigin(0.5).setDepth(48).setAlpha(0).setScale(0.82);
+
+    this.tweens.add({
+      targets: txt, alpha: 1, scale: 1,
+      duration: 200, ease: "Back.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: txt, alpha: 0, y: GAME_HEIGHT * 0.36,
+          duration: 600, delay: 900, ease: "Power2",
+          onComplete: () => txt.destroy(),
+        });
+      },
+    });
   }
 
   // ── Sea creatures (background atmosphere) ────────────────────────────────────

@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
-import { emitSceneChange, emitGameState, emitGameOverAdRequest, onGameOverAd } from "../game/EventBus";
+import {
+  emitSceneChange, emitGameState, emitGameOverAdRequest, onGameOverAd,
+  emitShowScoreCard, emitOpenLeaderboard,
+} from "../game/EventBus";
 import { getSkinDef, SKIN_DEFS } from "../player/SkinDefs";
 import { saveManager } from "../save/SaveManager";
 import { soundManager } from "../audio/SoundManager";
@@ -48,7 +51,7 @@ export class GameOverScene extends Phaser.Scene {
     const unlockedSkins = saveManager.unlockedSkins;
     const hasSkinChoice = unlockedSkins.length > 1;
     const panelW = 360;
-    let panelH = 340; // base height includes skin picker row
+    let panelH = 388; // base height includes skin picker row + share/leaderboard row
     if (hasUnlocks) panelH += newlyUnlockedSkins.length * 36;
 
     const panelX = cx - panelW / 2;
@@ -205,7 +208,7 @@ export class GameOverScene extends Phaser.Scene {
 
     // ── Buttons ───────────────────────────────────────────────────────────────
 
-    const btnY = panelY + panelH - 46;
+    const btnY = panelY + panelH - 88;
 
     const playBtn = this.add.text(cx - 78, btnY, "▶  PLAY AGAIN", {
       fontSize: "14px", fontFamily: "Arial, sans-serif",
@@ -236,6 +239,34 @@ export class GameOverScene extends Phaser.Scene {
     });
     menuBtn.on("pointerover", () => menuBtn.setStyle({ color: "#80c8ff" }));
     menuBtn.on("pointerout",  () => menuBtn.setStyle({ color: "#c0d8ff" }));
+
+    // ── Share + Leaderboard row ───────────────────────────────────────────────
+
+    const shareBtn = this.add.text(cx - 78, btnY + 46, "📤  SHARE", {
+      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      color: "#80d8ff", backgroundColor: "#0a1e38",
+      padding: { x: 18, y: 9 }, stroke: "#041020", strokeThickness: 2,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    shareBtn.on("pointerdown", () => {
+      soundManager.playTap();
+      emitShowScoreCard({ score, bestScore, shellsCollected, newRecord });
+    });
+    shareBtn.on("pointerover",  () => shareBtn.setStyle({ color: "#c0eeff" }));
+    shareBtn.on("pointerout",   () => shareBtn.setStyle({ color: "#80d8ff" }));
+
+    const lbBtn = this.add.text(cx + 78, btnY + 46, "🏆  SCORES", {
+      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      color: "#ffd84a", backgroundColor: "#1a1200",
+      padding: { x: 18, y: 9 }, stroke: "#0a0800", strokeThickness: 2,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    lbBtn.on("pointerdown", () => {
+      soundManager.playTap();
+      emitOpenLeaderboard();
+    });
+    lbBtn.on("pointerover",  () => lbBtn.setStyle({ color: "#ffe880" }));
+    lbBtn.on("pointerout",   () => lbBtn.setStyle({ color: "#ffd84a" }));
 
     // ── Rewarded ad offer ─────────────────────────────────────────────────────
     // Offer the player a free continue via a rewarded ad.

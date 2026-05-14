@@ -12,7 +12,7 @@
 
 import Phaser from "phaser";
 import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
-import { emitSceneChange } from "../game/EventBus";
+import { emitSceneChange, emitOpenLeaderboard } from "../game/EventBus";
 import { saveManager } from "../save/SaveManager";
 import { getSkinDef } from "../player/SkinDefs";
 import { soundManager } from "../audio/SoundManager";
@@ -225,11 +225,19 @@ export class MainMenuScene extends Phaser.Scene {
     const settingsBtn = this.add.text(cx + 112, btnY, "⚙  OPTIONS", btnStyle)
       .setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
 
+    // Leaderboard button — second row, centred
+    const lbBtn = this.add.text(cx, btnY + 38, "🌍  SCORES", {
+      ...btnStyle,
+      color: "#ffd84a", backgroundColor: "#1a1200",
+    }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
+
     const hover = (btn: Phaser.GameObjects.Text) => {
       btn.on("pointerover", () => btn.setStyle({ color: "#c0e8ff" }));
       btn.on("pointerout",  () => btn.setStyle({ color: "#80b8e0" }));
     };
     hover(skinsBtn); hover(achBtn); hover(settingsBtn);
+    lbBtn.on("pointerover", () => lbBtn.setStyle({ color: "#ffe880" }));
+    lbBtn.on("pointerout",  () => lbBtn.setStyle({ color: "#ffd84a" }));
 
     skinsBtn.on("pointerdown", () => {
       soundManager.playTap();
@@ -250,6 +258,11 @@ export class MainMenuScene extends Phaser.Scene {
       this.cameras.main.fade(180, 0, 0, 0, false, (_: unknown, p: number) => {
         if (p >= 1) this.scene.start(SCENE.SETTINGS, { from: SCENE.MAIN_MENU });
       });
+    });
+
+    lbBtn.on("pointerdown", () => {
+      soundManager.playTap();
+      emitOpenLeaderboard();
     });
   }
 

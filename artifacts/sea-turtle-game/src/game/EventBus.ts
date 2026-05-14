@@ -50,6 +50,15 @@ export interface ReviveCommandPayload {
 
 // ── Event name constants ───────────────────────────────────────────────────────
 
+// ── Score card + leaderboard (Phaser → React) ────────────────────────────────
+
+export interface ScoreCardPayload {
+  score: number;
+  bestScore: number;
+  shellsCollected: number;
+  newRecord: boolean;
+}
+
 const EV = {
   GAME_STATE:         "os:game-state",        // Phaser → React
   SCENE_CHANGE:       "os:scene-change",      // Phaser → React
@@ -59,6 +68,8 @@ const EV = {
   PRIVACY_POLICY:     "os:privacy-policy",    // Phaser → React (open /privacy route)
   AD_PREFERENCES:     "os:ad-preferences",   // Phaser → React (re-show consent modal)
   ABOUT:              "os:about",             // Phaser → React (open /about route)
+  SHOW_SCORE_CARD:    "os:show-score-card",   // Phaser → React (share card overlay)
+  OPEN_LEADERBOARD:   "os:open-leaderboard",  // Phaser → React (leaderboard overlay)
 } as const;
 
 // ── Emit helpers ──────────────────────────────────────────────────────────────
@@ -167,4 +178,30 @@ export function onAbout(cb: () => void): () => void {
   const handler = () => cb();
   window.addEventListener(EV.ABOUT, handler);
   return () => window.removeEventListener(EV.ABOUT, handler);
+}
+
+// ── Score card (Phaser → React) ───────────────────────────────────────────────
+
+/** GameOverScene → React: show the shareable score card overlay. */
+export function emitShowScoreCard(payload: ScoreCardPayload): void {
+  window.dispatchEvent(new CustomEvent(EV.SHOW_SCORE_CARD, { detail: payload }));
+}
+
+export function onShowScoreCard(cb: (p: ScoreCardPayload) => void): () => void {
+  const handler = (e: Event) => cb((e as CustomEvent<ScoreCardPayload>).detail);
+  window.addEventListener(EV.SHOW_SCORE_CARD, handler);
+  return () => window.removeEventListener(EV.SHOW_SCORE_CARD, handler);
+}
+
+// ── Leaderboard (Phaser → React) ──────────────────────────────────────────────
+
+/** GameOverScene/MainMenuScene → React: open the leaderboard overlay. */
+export function emitOpenLeaderboard(): void {
+  window.dispatchEvent(new CustomEvent(EV.OPEN_LEADERBOARD));
+}
+
+export function onOpenLeaderboard(cb: () => void): () => void {
+  const handler = () => cb();
+  window.addEventListener(EV.OPEN_LEADERBOARD, handler);
+  return () => window.removeEventListener(EV.OPEN_LEADERBOARD, handler);
 }

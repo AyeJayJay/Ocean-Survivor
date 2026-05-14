@@ -17,11 +17,13 @@ import AboutScreen from "./pages/AboutScreen";
 import TermsOfService from "./pages/TermsOfService";
 import {
   onGameState, onSceneChange, onAchievementToast, onGameOverAd, onPrivacyPolicy,
-  onAdPreferences, onAbout,
+  onAdPreferences, onAbout, onShowScoreCard, onOpenLeaderboard,
   emitReviveCommand, emitRestartCommand, emitGameOverAdResult,
   type GameUIState, type GameStatePayload, type ScenePayload,
-  type AchievementToastPayload,
+  type AchievementToastPayload, type ScoreCardPayload,
 } from "./game/EventBus";
+import ScoreCard from "./components/ScoreCard";
+import LeaderboardModal from "./components/LeaderboardModal";
 import { GAME_WIDTH, GAME_HEIGHT } from "./game/GameConfig";
 
 // Set to true once an LLC is established and Stripe donations are ready
@@ -116,6 +118,10 @@ function GameShell() {
   const toastKeyRef = useRef(0);
 
   const [showAdConsent, setShowAdConsent] = useState(false);
+
+  const [showScoreCard, setShowScoreCard] = useState(false);
+  const [scoreCardData, setScoreCardData] = useState<ScoreCardPayload | null>(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   // ── Back-button handler (Android) — prevent accidental exit ──────────────────
   // Capacitor/WebView surfaces Android back-button as a popstate or a custom
@@ -214,7 +220,18 @@ function GameShell() {
       navigate("/about");
     });
 
-    return () => { offState(); offScene(); offToast(); offGameOverAd(); offPrivacy(); offAdPrefs(); offAbout(); };
+    // Score card overlay
+    const offScoreCard = onShowScoreCard((payload) => {
+      setScoreCardData(payload);
+      setShowScoreCard(true);
+    });
+
+    // Leaderboard overlay
+    const offLeaderboard = onOpenLeaderboard(() => {
+      setShowLeaderboard(true);
+    });
+
+    return () => { offState(); offScene(); offToast(); offGameOverAd(); offPrivacy(); offAdPrefs(); offAbout(); offScoreCard(); offLeaderboard(); };
   }, [navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeToast = useCallback((key: number) => {
@@ -420,6 +437,17 @@ function GameShell() {
 
         {showAdConsent && (
           <AdConsentModal onDone={handleConsentDone} />
+        )}
+
+        {showScoreCard && scoreCardData && (
+          <ScoreCard
+            data={scoreCardData}
+            onClose={() => setShowScoreCard(false)}
+          />
+        )}
+
+        {showLeaderboard && (
+          <LeaderboardModal onClose={() => setShowLeaderboard(false)} />
         )}
       </div>
     </div>
