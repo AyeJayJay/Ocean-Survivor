@@ -27,7 +27,7 @@ export class SettingsScene extends Phaser.Scene {
 
     // Title
     this.add.text(cx, 58, "SETTINGS", {
-      fontSize: "28px", fontFamily: "Arial Black, sans-serif",
+      fontSize: "28px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#00e8ff", stroke: "#002a40", strokeThickness: 5,
     }).setOrigin(0.5).setDepth(10);
 
@@ -75,7 +75,7 @@ export class SettingsScene extends Phaser.Scene {
     credits.forEach((line, i) => {
       this.add.text(cx, panelY + 268 + i * 22, line, {
         fontSize: i === 0 ? "14px" : "12px",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "'Nunito', Arial, sans-serif",
         color: i === 0 ? "#c0e8ff" : "rgba(140,180,220,0.65)",
         align: "center",
       }).setOrigin(0.5).setDepth(10);
@@ -92,7 +92,7 @@ export class SettingsScene extends Phaser.Scene {
 
     privacyText.forEach((line, i) => {
       this.add.text(cx, panelY + 438 + i * 22, line, {
-        fontSize: "11px", fontFamily: "Arial, sans-serif",
+        fontSize: "11px", fontFamily: "'Nunito', Arial, sans-serif",
         color: "rgba(120,160,200,0.55)",
         align: "center",
         wordWrap: { width: 340 },
@@ -102,7 +102,7 @@ export class SettingsScene extends Phaser.Scene {
     // ── Ad preferences button ─────────────────────────────────────────────────
 
     const consentBtn = this.add.text(cx, panelY + 496, "🎯  Manage Ad Preferences", {
-      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      fontSize: "13px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#4090b0",
       align: "center",
     }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
@@ -117,7 +117,7 @@ export class SettingsScene extends Phaser.Scene {
     // ── Privacy Policy link ───────────────────────────────────────────────────
 
     const privacyBtn = this.add.text(cx, panelY + 534, "📋  Privacy Policy", {
-      fontSize: "12px", fontFamily: "Arial, sans-serif",
+      fontSize: "12px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#3a7090",
       align: "center",
     }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
@@ -132,7 +132,7 @@ export class SettingsScene extends Phaser.Scene {
     // ── About & Terms link ────────────────────────────────────────────────────
 
     const aboutBtn = this.add.text(cx, panelY + 566, "ℹ️  About & Terms", {
-      fontSize: "12px", fontFamily: "Arial, sans-serif",
+      fontSize: "12px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#3a7090",
       align: "center",
     }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
@@ -147,7 +147,7 @@ export class SettingsScene extends Phaser.Scene {
     // ── Back button ──────────────────────────────────────────────────────────
 
     const backBtn = this.add.text(cx, GAME_HEIGHT - 60, "◄  BACK", {
-      fontSize: "16px", fontFamily: "Arial, sans-serif",
+      fontSize: "16px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#c0d8ff", backgroundColor: "#102840",
       padding: { x: 20, y: 11 }, stroke: "#061428", strokeThickness: 2,
     }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });
@@ -172,7 +172,7 @@ export class SettingsScene extends Phaser.Scene {
 
   private sectionLabel(x: number, y: number, label: string): void {
     this.add.text(x, y, label, {
-      fontSize: "11px", fontFamily: "Arial, sans-serif",
+      fontSize: "11px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "rgba(100,160,210,0.6)",
       letterSpacing: 3,
     }).setOrigin(0.5).setDepth(10);
@@ -192,7 +192,7 @@ export class SettingsScene extends Phaser.Scene {
     onToggle: (newState: boolean) => void
   ): void {
     this.add.text(cx - 80, y, label, {
-      fontSize: "15px", fontFamily: "Arial, sans-serif",
+      fontSize: "15px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#c0d8ff",
     }).setOrigin(0, 0.5).setDepth(10);
 
@@ -230,7 +230,7 @@ export class SettingsScene extends Phaser.Scene {
 
   private showToast(msg: string): void {
     const toast = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 130, msg, {
-      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      fontSize: "13px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#ffffff", backgroundColor: "rgba(0,0,0,0.7)",
       padding: { x: 14, y: 8 },
     }).setOrigin(0.5).setDepth(50).setAlpha(0);

@@ -56,7 +56,7 @@ export class SkinSelectScene extends Phaser.Scene {
 
     // Title
     this.add.text(cx, 52, "CHOOSE YOUR TURTLE", {
-      fontSize: "22px", fontFamily: "Arial Black, sans-serif",
+      fontSize: "22px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#00e8ff", stroke: "#002a40", strokeThickness: 4,
     }).setOrigin(0.5).setDepth(10);
 
@@ -105,7 +105,7 @@ export class SkinSelectScene extends Phaser.Scene {
       const nameText = this.add.text(
         cellX + cellW / 2, cellY + cellH - 42,
         def.name,
-        { fontSize: "12px", fontFamily: "Arial, sans-serif", color: locked ? "#6070a0" : "#c0e8ff" }
+        { fontSize: "12px", fontFamily: "'Nunito', Arial, sans-serif", color: locked ? "#6070a0" : "#c0e8ff" }
       ).setOrigin(0.5).setDepth(10);
 
       // Status label
@@ -116,7 +116,7 @@ export class SkinSelectScene extends Phaser.Scene {
       this.add.text(
         cellX + cellW / 2, cellY + cellH - 24,
         statusLabel,
-        { fontSize: "10px", fontFamily: "Arial, sans-serif", color: locked ? "#404060" : "#60c080" }
+        { fontSize: "10px", fontFamily: "'Nunito', Arial, sans-serif", color: locked ? "#404060" : "#60c080" }
       ).setOrigin(0.5).setDepth(10);
 
       // Hit area
@@ -151,14 +151,14 @@ export class SkinSelectScene extends Phaser.Scene {
 
     // Hint text for locked skins
     this.hintText = this.add.text(cx, GAME_HEIGHT - 106, "", {
-      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      fontSize: "13px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#ffd84a", stroke: "#4a2800", strokeThickness: 2,
       align: "center",
     }).setOrigin(0.5).setDepth(20).setAlpha(0);
 
     // Back button
     const backBtn = this.add.text(cx, GAME_HEIGHT - 60, "◄  BACK", {
-      fontSize: "16px", fontFamily: "Arial, sans-serif",
+      fontSize: "16px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#c0d8ff", backgroundColor: "#102840",
       padding: { x: 20, y: 11 }, stroke: "#061428", strokeThickness: 2,
     }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });

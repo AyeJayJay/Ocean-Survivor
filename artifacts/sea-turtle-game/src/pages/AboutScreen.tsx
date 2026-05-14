@@ -77,7 +77,7 @@ export default function AboutScreen({ onClose }: Props) {
         <h1 style={{
           color: "#00e8ff",
           fontSize: 18,
-          fontFamily: "Arial Black, sans-serif",
+          fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
           margin: 0,
         }}>
           About & Terms
@@ -105,7 +105,7 @@ export default function AboutScreen({ onClose }: Props) {
             <div style={{
               color: "#00e8ff",
               fontSize: 20,
-              fontFamily: "Arial Black, sans-serif",
+              fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
               fontWeight: 900,
               letterSpacing: "0.04em",
               marginBottom: 4,
@@ -307,7 +307,7 @@ const sectionStyle: React.CSSProperties = { marginBottom: 4 };
 const h2: React.CSSProperties = {
   color: "#4dc8ff",
   fontSize: 14,
-  fontFamily: "Arial, sans-serif",
+  fontFamily: "'Nunito', Arial, sans-serif",
   fontWeight: 700,
   margin: "0 0 10px",
   letterSpacing: "0.02em",

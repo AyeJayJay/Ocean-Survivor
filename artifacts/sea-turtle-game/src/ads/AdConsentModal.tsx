@@ -87,7 +87,7 @@ export default function AdConsentModal({ onDone }: Props) {
           color: "#00e8ff",
           fontSize: 19,
           fontWeight: 800,
-          fontFamily: "Arial Black, sans-serif",
+          fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
           margin: "0 0 10px",
           letterSpacing: "-0.01em",
         }}>

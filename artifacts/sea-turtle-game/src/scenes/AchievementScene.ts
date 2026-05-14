@@ -40,7 +40,7 @@ export class AchievementScene extends Phaser.Scene {
 
     // ── Title ─────────────────────────────────────────────────────────────────
     this.add.text(cx, 52, "ACHIEVEMENTS", {
-      fontSize: "26px", fontFamily: "Arial Black, sans-serif",
+      fontSize: "26px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#ffd84a", stroke: "#3a1800", strokeThickness: 5,
     }).setOrigin(0.5).setDepth(10);
 
@@ -48,7 +48,7 @@ export class AchievementScene extends Phaser.Scene {
     const total = ACHIEVEMENTS.length;
     const done  = ACHIEVEMENTS.filter(a => achievementManager.isCompleted(a.id)).length;
     this.add.text(cx, 86, `${done} / ${total} completed`, {
-      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      fontSize: "13px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "rgba(200,220,255,0.6)",
     }).setOrigin(0.5).setDepth(10);
 
@@ -81,14 +81,14 @@ export class AchievementScene extends Phaser.Scene {
 
       // Name
       const nameTxt = this.add.text(rowX + 56, y + 16, ach.name, {
-        fontSize: "13px", fontFamily: "Arial Black, sans-serif",
+        fontSize: "13px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
         color: isComplete ? "#80ffcc" : "#a0c0e0",
       }).setOrigin(0, 0.5);
       listContainer.add(nameTxt);
 
       // Description
       const descTxt = this.add.text(rowX + 56, y + 32, ach.description, {
-        fontSize: "10px", fontFamily: "Arial, sans-serif",
+        fontSize: "10px", fontFamily: "'Nunito', Arial, sans-serif",
         color: "rgba(140,170,210,0.6)",
       }).setOrigin(0, 0.5);
       listContainer.add(descTxt);
@@ -114,14 +114,14 @@ export class AchievementScene extends Phaser.Scene {
       // Completion badge / percentage
       if (isComplete) {
         const check = this.add.text(rowX + ROW_W - 14, y + ROW_H / 2, "✓", {
-          fontSize: "18px", fontFamily: "Arial, sans-serif",
+          fontSize: "18px", fontFamily: "'Nunito', Arial, sans-serif",
           color: "#00e080",
         }).setOrigin(1, 0.5);
         listContainer.add(check);
       } else {
         const pct = Math.round(fraction * 100);
         const pctTxt = this.add.text(rowX + ROW_W - 14, y + ROW_H / 2, `${pct}%`, {
-          fontSize: "10px", fontFamily: "Arial, sans-serif",
+          fontSize: "10px", fontFamily: "'Nunito', Arial, sans-serif",
           color: "rgba(100,140,180,0.6)",
         }).setOrigin(1, 0.5);
         listContainer.add(pctTxt);
@@ -233,7 +233,7 @@ export class AchievementScene extends Phaser.Scene {
     // ── Scroll hint (only when content overflows) ─────────────────────────────
     if (showScrollbar) {
       const hint = this.add.text(cx, MASK_TOP + MASK_H - 18, "▼  scroll for more", {
-        fontSize: "10px", fontFamily: "Arial, sans-serif",
+        fontSize: "10px", fontFamily: "'Nunito', Arial, sans-serif",
         color: "rgba(100,160,210,0.5)",
       }).setOrigin(0.5).setDepth(20);
 
@@ -246,7 +246,7 @@ export class AchievementScene extends Phaser.Scene {
 
     // ── Back button (fixed, outside container) ────────────────────────────────
     const backBtn = this.add.text(cx, GAME_HEIGHT - 42, "◄  BACK", {
-      fontSize: "16px", fontFamily: "Arial, sans-serif",
+      fontSize: "16px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#c0d8ff", backgroundColor: "#102840",
       padding: { x: 20, y: 11 }, stroke: "#061428", strokeThickness: 2,
     }).setOrigin(0.5).setDepth(20).setInteractive({ useHandCursor: true });

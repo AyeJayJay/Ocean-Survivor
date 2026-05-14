@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
 import {
-  emitSceneChange, emitGameState, onGameOverAd,
+  emitSceneChange, emitGameState,
   emitShowScoreCard, emitOpenLeaderboard,
 } from "../game/EventBus";
 import { getSkinDef } from "../player/SkinDefs";
@@ -264,7 +264,7 @@ export class GameOverScene extends Phaser.Scene {
 
     if (hasSkinChoice) {
       const leftArrow = this.add.text(panelX + 32, skinPickerY + 8, "◄", {
-        fontSize: "20px", fontFamily: "Arial, sans-serif", color: "#4a9fdf",
+        fontSize: "20px", fontFamily: "'Nunito', Arial, sans-serif", color: "#4a9fdf",
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       container.add(leftArrow);
 
@@ -278,7 +278,7 @@ export class GameOverScene extends Phaser.Scene {
       leftArrow.on("pointerout",   () => leftArrow.setStyle({ color: "#4a9fdf" }));
 
       const rightArrow = this.add.text(panelX + panelW - 32, skinPickerY + 8, "►", {
-        fontSize: "20px", fontFamily: "Arial, sans-serif", color: "#4a9fdf",
+        fontSize: "20px", fontFamily: "'Nunito', Arial, sans-serif", color: "#4a9fdf",
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       container.add(rightArrow);
 

@@ -1,0 +1,168 @@
+You are performing a FINAL PRE-LAUNCH VERIFICATION audit for my mobile game that will be released as an iOS app.
+
+The game has already gone through:
+
+App Store compliance fixes
+UX improvements
+retention improvements
+visual polish improvements
+gameplay updates
+performance optimizations
+
+Your task now is to VERIFY whether the game is truly launch-ready after all fixes were implemented.
+
+Do NOT repeat generic advice.
+
+Instead:
+
+aggressively search for remaining hidden problems
+verify that previous fixes were implemented correctly
+identify anything still hurting approval chances
+identify anything still hurting retention/addictiveness
+identify anything that still feels amateur or unfinished
+
+Be extremely strict and detailed.
+
+PHASE 1 — FINAL APP STORE REVIEW SIMULATION
+
+Pretend you are an actual Apple reviewer.
+
+Attempt to find:
+
+rejection risks
+broken flows
+unfinished screens
+placeholder content
+crashes
+performance issues
+privacy/legal issues
+fake functionality
+low-quality experiences
+weak onboarding
+inconsistent UI
+WebView-related problems
+accessibility issues
+touch target problems
+orientation/layout bugs
+loading issues
+
+Then estimate:
+
+REALISTIC approval probability
+PHASE 2 — FINAL PLAYER EXPERIENCE TEST
+
+Pretend you are:
+
+a first-time player
+a TikTok user
+a casual mobile gamer
+a hypercasual game fan
+
+Analyze:
+
+first 10-second experience
+visual appeal
+addictiveness
+replayability
+fun factor
+emotional engagement
+frustration balance
+reward satisfaction
+“one more try” effect
+
+Determine:
+
+whether the game is ACTUALLY enjoyable
+whether it still feels repetitive
+whether it feels polished enough for public launch
+PHASE 3 — FINAL POLISH INSPECTION
+
+Search for anything that still feels:
+
+cheap
+generic
+empty
+stiff
+outdated
+unfinished
+low-effort
+
+Review:
+
+menus
+transitions
+animations
+effects
+score systems
+UI spacing
+font consistency
+audio feedback
+onboarding
+game-over flow
+reward presentation
+splash/loading screens
+
+Identify all remaining polish opportunities.
+
+PHASE 4 — PERFORMANCE & STABILITY VERIFICATION
+
+Verify:
+
+smooth framerate
+memory efficiency
+mobile responsiveness
+battery efficiency
+asset optimization
+loading speed
+touch responsiveness
+animation smoothness
+iPhone compatibility
+WebView stability
+
+Attempt to identify:
+
+hidden bottlenecks
+future scaling problems
+device-specific risks
+PHASE 5 — FINAL COMMERCIAL VIABILITY REVIEW
+
+Estimate:
+
+retention potential
+viral potential
+player satisfaction
+monetization readiness
+App Store competitiveness
+likelihood of organic growth
+
+Then answer:
+
+Would real players recommend this?
+Would creators post clips of it?
+Would users uninstall quickly?
+Does this feel commercially viable?
+Does this feel polished enough to compete?
+OUTPUT FORMAT
+Final Launch Verdict
+Estimated Apple Approval Probability
+Remaining Rejection Risks
+Remaining Polish Issues
+Remaining Retention Weaknesses
+Remaining Addictiveness Weaknesses
+Remaining Performance Risks
+Commercial Viability Score
+Viral Potential Score
+Final “Feels Like a Real App?” Score
+Top Remaining Improvements Before Launch
+Launch Readiness Checklist
+Brutally Honest Final Verdict
+
+If something was fixed correctly:
+
+explicitly confirm it
+
+If something still needs work:
+
+explain EXACTLY why
+
+Only focus on REMAINING issues and final verification.

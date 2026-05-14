@@ -89,7 +89,7 @@ export default function LeaderboardModal({ onClose }: Props) {
         display: "flex", flexDirection: "column",
         background: "linear-gradient(180deg, #010a18 0%, #020d20 100%)",
         animation: "lb-in 0.22s ease-out",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "'Nunito', Arial, sans-serif",
       }}
     >
       <style>{`
@@ -113,7 +113,7 @@ export default function LeaderboardModal({ onClose }: Props) {
           <div style={{ fontSize: 11, letterSpacing: 3, color: "rgba(0,200,255,0.5)", marginBottom: 2 }}>
             OCEAN SURVIVOR
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#c0eaff", fontFamily: "Arial Black, sans-serif" }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#c0eaff", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif", letterSpacing: 1 }}>
             🏆 Leaderboard
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function LeaderboardModal({ onClose }: Props) {
               style={{
                 flex: 1, background: "rgba(0,60,120,0.5)", border: "1px solid rgba(0,160,255,0.4)",
                 borderRadius: 8, color: "#c0e8ff", fontSize: 13, padding: "4px 8px",
-                outline: "none", fontFamily: "Arial, sans-serif",
+                outline: "none", fontFamily: "'Nunito', Arial, sans-serif",
               }}
               maxLength={20}
             />
@@ -246,7 +246,7 @@ export default function LeaderboardModal({ onClose }: Props) {
                 fontSize: 15, textAlign: "right",
                 color: idx === 0 ? "#ffd84a" : isMe ? "#80d0ff" : "#c0e0ff",
                 fontWeight: idx < 3 || isMe ? 700 : 400,
-                fontFamily: "Arial Black, sans-serif",
+                fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
               }}>
                 {entry.score}
               </span>

@@ -77,7 +77,7 @@ export default function PrivacyPolicy({ onClose }: Props) {
         <h1 style={{
           color: "#00e8ff",
           fontSize: 18,
-          fontFamily: "Arial Black, sans-serif",
+          fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
           margin: 0,
         }}>
           Privacy Policy
@@ -369,7 +369,7 @@ const sectionStyle: React.CSSProperties = {
 const h2: React.CSSProperties = {
   color: "#4dc8ff",
   fontSize: 14,
-  fontFamily: "Arial, sans-serif",
+  fontFamily: "'Nunito', Arial, sans-serif",
   fontWeight: 700,
   margin: "0 0 10px",
   letterSpacing: "0.02em",
@@ -378,7 +378,7 @@ const h2: React.CSSProperties = {
 const h3: React.CSSProperties = {
   color: "rgba(160,210,255,0.85)",
   fontSize: 12,
-  fontFamily: "Arial, sans-serif",
+  fontFamily: "'Nunito', Arial, sans-serif",
   fontWeight: 700,
   margin: "14px 0 6px",
 };

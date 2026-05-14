@@ -157,25 +157,25 @@ export class GameScene extends Phaser.Scene {
 
     // HUD (depth 30)
     this.scoreText = this.add.text(GAME_WIDTH / 2, 52, "0", {
-      fontSize: "42px", fontFamily: "Arial Black, sans-serif",
+      fontSize: "42px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#ffffff", stroke: "#000000", strokeThickness: 5,
     }).setOrigin(0.5).setDepth(30);
 
     this.shellText = this.add.text(GAME_WIDTH - 14, 68, "🐚 0", {
-      fontSize: "14px", fontFamily: "Arial, sans-serif",
+      fontSize: "14px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#ffd84a", stroke: "#4a2800", strokeThickness: 2,
     }).setOrigin(1, 0).setDepth(30);
 
     // Personal-best ghost — dims out once player beats it
     this.bestScoreHudText = this.add.text(GAME_WIDTH / 2, 82,
       this.bestScore > 0 ? `Best ${this.bestScore}` : "", {
-        fontSize: "14px", fontFamily: "Arial, sans-serif",
+        fontSize: "14px", fontFamily: "'Nunito', Arial, sans-serif",
         color: "rgba(255,220,80,0.38)", stroke: "#000000", strokeThickness: 2,
       }).setOrigin(0.5).setDepth(30);
 
     // Achievement progress hint (bottom-right, depth 31)
     this.nextAchHudText = this.add.text(GAME_WIDTH - 14, GAME_HEIGHT - 60, "", {
-      fontSize: "10px", fontFamily: "Arial, sans-serif",
+      fontSize: "10px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "rgba(140,190,255,0.5)",
     }).setOrigin(1, 0).setDepth(31);
     this.nextAchHudBarGfx = this.add.graphics().setDepth(31);
@@ -191,7 +191,7 @@ export class GameScene extends Phaser.Scene {
 
     // Pause button (top-left, safe below banner ad)
     this.pauseBtn = this.add.text(18, 52, "⏸", {
-      fontSize: "22px", fontFamily: "Arial, sans-serif",
+      fontSize: "22px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "rgba(255,255,255,0.55)",
     }).setOrigin(0, 0.5).setDepth(30).setInteractive({ useHandCursor: true });
 
@@ -398,7 +398,7 @@ export class GameScene extends Phaser.Scene {
     panelBg.strokeRoundedRect(-panelW / 2, -panelH / 2, panelW, panelH, 16);
 
     const title = this.add.text(0, -panelH / 2 + 36, "PAUSED", {
-      fontSize: "24px", fontFamily: "Arial Black, sans-serif",
+      fontSize: "24px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#80c8ff", stroke: "#001828", strokeThickness: 4,
     }).setOrigin(0.5);
 
@@ -434,7 +434,7 @@ export class GameScene extends Phaser.Scene {
     onClick: () => void
   ): Phaser.GameObjects.Text {
     const btn = this.add.text(x, y, label, {
-      fontSize: "15px", fontFamily: "Arial, sans-serif",
+      fontSize: "15px", fontFamily: "'Nunito', Arial, sans-serif",
       color, backgroundColor: bg,
       padding: { x: 20, y: 10 },
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -478,7 +478,7 @@ export class GameScene extends Phaser.Scene {
 
     // "So Close!" text
     const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.35, "So Close!", {
-      fontSize: "22px", fontFamily: "Arial Black, sans-serif",
+      fontSize: "22px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#ffff60", stroke: "#4a4a00", strokeThickness: 4,
     }).setOrigin(0.5).setDepth(48).setAlpha(0);
 
@@ -627,7 +627,7 @@ export class GameScene extends Phaser.Scene {
     const x = PLAYER_X + 55;
     const y = this.player.y - 20;
     const txt = this.add.text(x, y, count > 1 ? `+${count}` : "+1", {
-      fontSize: "18px", fontFamily: "Arial, sans-serif",
+      fontSize: "18px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#ffffff", stroke: "#000000", strokeThickness: 3,
     }).setOrigin(0.5).setDepth(40);
 
@@ -731,7 +731,7 @@ export class GameScene extends Phaser.Scene {
     // ── "Keep Swimming! 🐢" popup text ───────────────────────────────────────
     const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.36, "Keep Swimming! 🐢", {
       fontSize: "22px",
-      fontFamily: "Arial Black, sans-serif",
+      fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       color: "#80ffcc",
       stroke: "#003322",
       strokeThickness: 4,
@@ -995,7 +995,7 @@ export class GameScene extends Phaser.Scene {
       GAME_WIDTH / 2, GAME_HEIGHT * 0.42,
       `${icon}  ${name}  ${pct}%`,
       {
-        fontSize: "16px", fontFamily: "Arial Black, sans-serif",
+        fontSize: "16px", fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
         color: "#80d8ff", stroke: "#001830", strokeThickness: 4,
       },
     ).setOrigin(0.5).setDepth(48).setAlpha(0).setScale(0.82);

@@ -67,7 +67,7 @@ export default function ScoreCard({ data, onClose }: Props) {
           overflow: "hidden",
           boxShadow: "0 12px 60px rgba(0,180,255,0.3), 0 4px 24px rgba(0,0,0,0.8)",
           animation: "score-card-in 0.3s cubic-bezier(0.34,1.56,0.64,1)",
-          fontFamily: "Arial Black, Impact, sans-serif",
+          fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
         }}
       >
         {/* Header gradient */}
@@ -87,7 +87,7 @@ export default function ScoreCard({ data, onClose }: Props) {
 
           <div style={{
             fontSize: 11, letterSpacing: 4, color: "rgba(0,200,255,0.6)",
-            marginBottom: 4, fontFamily: "Arial, sans-serif", fontWeight: 700,
+            marginBottom: 4, fontFamily: "'Nunito', Arial, sans-serif", fontWeight: 700,
           }}>
             OCEAN SURVIVOR
           </div>
@@ -104,7 +104,7 @@ export default function ScoreCard({ data, onClose }: Props) {
           </div>
           <div style={{
             fontSize: 11, letterSpacing: 3, color: "rgba(150,210,255,0.55)",
-            fontFamily: "Arial, sans-serif", marginTop: 2,
+            fontFamily: "'Nunito', Arial, sans-serif", marginTop: 2,
           }}>
             SCORE
           </div>
@@ -139,7 +139,7 @@ export default function ScoreCard({ data, onClose }: Props) {
           padding: "10px 20px",
           textAlign: "center",
           fontSize: 12,
-          fontFamily: "Arial, sans-serif",
+          fontFamily: "'Nunito', Arial, sans-serif",
           color: "rgba(100,180,220,0.5)",
           letterSpacing: 0.5,
         }}>
@@ -170,7 +170,7 @@ export default function ScoreCard({ data, onClose }: Props) {
               color: "white",
               fontSize: 14,
               fontWeight: 700,
-              fontFamily: "Arial, sans-serif",
+              fontFamily: "'Nunito', Arial, sans-serif",
               padding: "11px 0",
               cursor: "pointer",
               letterSpacing: 0.3,
@@ -187,7 +187,7 @@ export default function ScoreCard({ data, onClose }: Props) {
               borderRadius: 14,
               color: "rgba(200,220,255,0.75)",
               fontSize: 14,
-              fontFamily: "Arial, sans-serif",
+              fontFamily: "'Nunito', Arial, sans-serif",
               padding: "11px 0",
               cursor: "pointer",
             }}
@@ -207,13 +207,13 @@ function StatBox({ label, value }: { label: string; value: string }) {
     }}>
       <div style={{
         fontSize: 18, color: "#c0e8ff",
-        fontFamily: "Arial Black, sans-serif",
+        fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
       }}>
         {value}
       </div>
       <div style={{
         fontSize: 9, letterSpacing: 2, color: "rgba(100,160,200,0.5)",
-        fontFamily: "Arial, sans-serif", marginTop: 2,
+        fontFamily: "'Nunito', Arial, sans-serif", marginTop: 2,
       }}>
         {label}
       </div>

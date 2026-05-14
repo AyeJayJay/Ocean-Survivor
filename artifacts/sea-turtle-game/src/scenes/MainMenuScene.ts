@@ -135,7 +135,7 @@ export class MainMenuScene extends Phaser.Scene {
     const hs = saveManager.highScore;
     if (hs > 0) {
       const hsText = this.add.text(cx, titleY + 104, `Best: ${hs}`, {
-        fontSize: "17px", fontFamily: "Arial, sans-serif",
+        fontSize: "17px", fontFamily: "'Nunito', Arial, sans-serif",
         color: "#ffd84a", stroke: "#2a1800", strokeThickness: 3,
       }).setOrigin(0.5).setDepth(20).setAlpha(0);
       this.fadeGroup.push(hsText);
@@ -144,14 +144,14 @@ export class MainMenuScene extends Phaser.Scene {
     const streak = saveManager.currentStreak;
     if (streak >= 2) {
       const streakText = this.add.text(cx, titleY + 128, `\uD83D\uDD25 ${streak} day streak!`, {
-        fontSize: "13px", fontFamily: "Arial, sans-serif",
+        fontSize: "13px", fontFamily: "'Nunito', Arial, sans-serif",
         color: "#ff9f3f", stroke: "#2a0800", strokeThickness: 2,
       }).setOrigin(0.5).setDepth(20).setAlpha(0);
       this.fadeGroup.push(streakText);
     }
 
     const tagline = this.add.text(cx, GAME_HEIGHT * 0.58, "Help the turtle clean up the ocean", {
-      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      fontSize: "13px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "rgba(160,220,255,0.65)", align: "center",
     }).setOrigin(0.5).setDepth(20).setAlpha(0);
     this.fadeGroup.push(tagline);
@@ -175,20 +175,20 @@ export class MainMenuScene extends Phaser.Scene {
     this.fadeGroup.push(badgeG);
 
     const dcLabel = this.add.text(badgeX + 18, badgeY + 10, `${dc.icon}  DAILY`, {
-      fontSize: "10px", fontFamily: "Arial, sans-serif",
+      fontSize: "10px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "rgba(100,180,220,0.7)", letterSpacing: 2,
     }).setOrigin(0, 0).setDepth(20).setAlpha(0);
     this.fadeGroup.push(dcLabel);
 
     const dcDesc = this.add.text(badgeX + 18, badgeY + 26, dc.description, {
-      fontSize: "12px", fontFamily: "Arial, sans-serif",
+      fontSize: "12px", fontFamily: "'Nunito', Arial, sans-serif",
       color: dcDone ? "#80ffcc" : "#c0e0ff",
     }).setOrigin(0, 0).setDepth(20).setAlpha(0);
     this.fadeGroup.push(dcDesc);
 
     if (dcDone) {
       const dcCheck = this.add.text(badgeX + badgeW - 16, badgeY + 26, "✓ Done!", {
-        fontSize: "12px", fontFamily: "Arial, sans-serif",
+        fontSize: "12px", fontFamily: "'Nunito', Arial, sans-serif",
         color: "#00e080",
       }).setOrigin(1, 0).setDepth(20).setAlpha(0);
       this.fadeGroup.push(dcCheck);
@@ -221,7 +221,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const btnY = GAME_HEIGHT * 0.87;
     const btnStyle = {
-      fontSize: "13px", fontFamily: "Arial, sans-serif",
+      fontSize: "13px", fontFamily: "'Nunito', Arial, sans-serif",
       color: "#80b8e0", backgroundColor: "#0a1e30",
       padding: { x: 14, y: 10 }, stroke: "#040e18", strokeThickness: 2,
     };

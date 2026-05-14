@@ -77,7 +77,7 @@ export default function TermsOfService({ onClose }: Props) {
         <h1 style={{
           color: "#00e8ff",
           fontSize: 18,
-          fontFamily: "Arial Black, sans-serif",
+          fontFamily: "'Bangers', 'Arial Black', Impact, sans-serif",
           margin: 0,
         }}>
           Terms of Use
@@ -240,7 +240,7 @@ const sectionStyle: React.CSSProperties = {
 const h2: React.CSSProperties = {
   color: "#4dc8ff",
   fontSize: 14,
-  fontFamily: "Arial, sans-serif",
+  fontFamily: "'Nunito', Arial, sans-serif",
   fontWeight: 700,
   margin: "0 0 10px",
   letterSpacing: "0.02em",
