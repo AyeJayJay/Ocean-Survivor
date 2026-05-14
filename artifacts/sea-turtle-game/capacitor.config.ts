@@ -18,9 +18,9 @@ const config: CapacitorConfig = {
     },
 
     StatusBar: {
-      style: "Dark",
+      style: "DARK",  // must be uppercase: "DARK" | "LIGHT" | "DEFAULT"
       backgroundColor: "#010c1a",
-      overlaysWebView: true,
+      overlaysWebView: false,  // false = status bar above content, not over it
     },
 
     // AdMob — initializeForTesting is controlled by USE_TEST_ADS in AdConfig.ts.
@@ -50,6 +50,9 @@ const config: CapacitorConfig = {
     contentInset: "always",
     allowsLinkPreview: false,
     scrollEnabled: false,
+    // Required: lets Web Audio API (SoundManager) play without demanding a
+    // fresh user gesture on every app resume inside WKWebView.
+    allowsInlineMediaPlayback: true,
     limitsNavigationsToAppBoundDomains: true,
   },
 

@@ -60,8 +60,8 @@ export default function AboutScreen({ onClose }: Props) {
             background: "rgba(255,255,255,0.08)",
             border: "1px solid rgba(255,255,255,0.15)",
             borderRadius: "50%",
-            width: 34,
-            height: 34,
+            width: 44,
+            height: 44,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -89,7 +89,7 @@ export default function AboutScreen({ onClose }: Props) {
         maxWidth: 480,
         width: "100%",
         margin: "0 auto",
-        fontFamily: "'Segoe UI', Arial, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif",
         color: "rgba(200,220,240,0.85)",
         fontSize: 13,
         lineHeight: 1.7,
@@ -224,19 +224,22 @@ export default function AboutScreen({ onClose }: Props) {
             {
               name: "Google AdMob",
               purpose: "In-app advertising",
-              policy: "admob.google.com · policies.google.com/privacy",
+              policy: "policies.google.com/privacy ↗",
+              url: "https://policies.google.com/privacy",
             },
             {
               name: "Capacitor / Ionic",
               purpose: "Native mobile packaging (Android & iOS)",
-              policy: "capacitorjs.com",
+              policy: "capacitorjs.com ↗",
+              url: "https://capacitorjs.com",
             },
             {
               name: "Phaser",
               purpose: "Game engine (runs entirely on your device)",
               policy: "phaser.io — no data collection",
+              url: "https://phaser.io",
             },
-          ].map(({ name, purpose, policy }) => (
+          ].map(({ name, purpose, policy, url }) => (
             <div
               key={name}
               style={{
@@ -253,9 +256,14 @@ export default function AboutScreen({ onClose }: Props) {
               <div style={{ color: "rgba(160,200,235,0.6)", fontSize: 12, marginBottom: 3 }}>
                 {purpose}
               </div>
-              <div style={{ color: "rgba(70,140,200,0.5)", fontSize: 11, fontStyle: "italic" }}>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "rgba(70,140,200,0.8)", fontSize: 11, fontStyle: "italic", textDecoration: "none", display: "block" }}
+              >
                 {policy}
-              </div>
+              </a>
             </div>
           ))}
         </section>

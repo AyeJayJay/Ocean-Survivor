@@ -14,6 +14,7 @@ import { saveManager } from "./save/SaveManager";
 import DonateModal from "./pages/DonateModal";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AboutScreen from "./pages/AboutScreen";
+import TermsOfService from "./pages/TermsOfService";
 import {
   onGameState, onSceneChange, onAchievementToast, onGameOverAd, onPrivacyPolicy,
   onAdPreferences, onAbout,
@@ -326,6 +327,7 @@ function GameShell() {
             {reviveAvailable && (
               <button
                 onClick={handleWatchAd}
+                aria-label="Watch an ad to continue playing with an extra life"
                 style={{
                   background: "linear-gradient(135deg, #1e7aff, #0d4aaa)",
                   border: "2px solid rgba(100,180,255,0.4)",
@@ -347,6 +349,7 @@ function GameShell() {
             )}
             <button
               onClick={handleRestartNow}
+              aria-label="Restart the game"
               style={{
                 background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(255,255,255,0.18)",
@@ -401,8 +404,8 @@ function GameShell() {
               background: "rgba(0,0,0,0.45)",
               border: "1px solid rgba(255,255,255,0.18)",
               borderRadius: "50%",
-              width: 36,
-              height: 36,
+              width: 44,
+              height: 44,
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: "pointer",
               fontSize: 16,
@@ -430,6 +433,7 @@ export default function App() {
     <Switch>
       <Route path="/privacy">{() => <PrivacyPolicy />}</Route>
       <Route path="/about">{() => <AboutScreen />}</Route>
+      <Route path="/terms">{() => <TermsOfService />}</Route>
       <Route>{() => <GameShell />}</Route>
     </Switch>
   );

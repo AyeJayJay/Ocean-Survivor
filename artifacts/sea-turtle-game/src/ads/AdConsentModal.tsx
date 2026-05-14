@@ -97,7 +97,7 @@ export default function AdConsentModal({ onDone }: Props) {
         <p style={{
           color: "rgba(170,210,250,0.8)",
           fontSize: 13,
-          fontFamily: "'Segoe UI', sans-serif",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           lineHeight: 1.6,
           margin: "0 0 20px",
         }}>
@@ -122,7 +122,7 @@ export default function AdConsentModal({ onDone }: Props) {
             padding: "16px 20px",
             fontSize: 14,
             fontWeight: 700,
-            fontFamily: "'Segoe UI', sans-serif",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             cursor: "pointer",
             width: "100%",
             marginBottom: 10,
@@ -168,7 +168,7 @@ export default function AdConsentModal({ onDone }: Props) {
             padding: "14px 20px",
             fontSize: 14,
             fontWeight: 700,
-            fontFamily: "'Segoe UI', sans-serif",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             cursor: "pointer",
             width: "100%",
             marginBottom: 18,
@@ -202,7 +202,7 @@ export default function AdConsentModal({ onDone }: Props) {
         <p style={{
           color: "rgba(110,150,190,0.6)",
           fontSize: 11,
-          fontFamily: "'Segoe UI', sans-serif",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           lineHeight: 1.55,
           margin: "0 0 16px",
         }}>
@@ -216,6 +216,8 @@ export default function AdConsentModal({ onDone }: Props) {
             Privacy Policy
           </a>.
           Ad networks may collect device identifiers to serve and measure ads.
+          On iPhone, iOS will also ask for permission to allow tracking — this is
+          the system-level version of the same choice above.
           Change your preference any time in Settings.
         </p>
 

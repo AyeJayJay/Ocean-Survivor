@@ -60,8 +60,8 @@ export default function PrivacyPolicy({ onClose }: Props) {
             background: "rgba(255,255,255,0.08)",
             border: "1px solid rgba(255,255,255,0.15)",
             borderRadius: "50%",
-            width: 34,
-            height: 34,
+            width: 44,
+            height: 44,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -90,7 +90,7 @@ export default function PrivacyPolicy({ onClose }: Props) {
         maxWidth: 480,
         width: "100%",
         margin: "0 auto",
-        fontFamily: "'Segoe UI', Arial, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif",
         color: "rgba(200,220,240,0.85)",
         fontSize: 13,
         lineHeight: 1.7,
@@ -216,15 +216,23 @@ export default function PrivacyPolicy({ onClose }: Props) {
               In-app advertising. AdMob is operated by Google LLC and governed by
               Google's Privacy Policy.
             </div>
-            <div style={serviceLink}>google.com/policies/privacy</div>
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={serviceLink}
+            >
+              policies.google.com/privacy ↗
+            </a>
           </div>
           <div style={serviceCard}>
-            <div style={serviceName}>Google Analytics for Firebase</div>
+            <div style={serviceName}>Custom Analytics (Self-hosted)</div>
             <div style={serviceDesc}>
-              Anonymous event analytics for understanding game performance. No personally
-              identifiable information is collected.
+              We collect anonymous game events (game starts, game-overs, ad interactions)
+              using our own server. Events contain no personally identifiable information
+              and are linked only to a random anonymous identifier stored on your device.
             </div>
-            <div style={serviceLink}>firebase.google.com/policies/analytics</div>
+            <div style={serviceLink}>Hosted by the {DEV_NAME}</div>
           </div>
           <p style={{ marginTop: 12 }}>
             Each third-party service operates under its own privacy policy and data

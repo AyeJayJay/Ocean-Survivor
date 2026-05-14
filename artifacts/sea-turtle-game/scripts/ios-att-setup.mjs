@@ -36,22 +36,38 @@ const PLIST     = join(ROOT, "ios", "App", "App", "Info.plist");
 
 // ── Keys to inject ────────────────────────────────────────────────────────────
 
+const ADMOB_APP_ID = "ca-app-pub-1287355220585536~4125519824";
+
 const ENTRIES = [
   {
     key:   "NSUserTrackingUsageDescription",
-    value: "This identifier is used to show you relevant ads and measure their performance to improve the game experience.",
+    // Apple requires the usage description to clearly explain WHY tracking is needed.
+    // This copy must match the choice you show in-app (AdConsentModal).
+    value: "Ocean Survivor uses your device\u2019s advertising identifier to show you personalized ads that help keep the game free. You chose your ad preference inside the game \u2014 this is the system-level confirmation of that choice.",
     description: "ATT prompt copy (required by Apple for apps using IDFA)",
   },
   {
     key:   "GADApplicationIdentifier",
-    value: "ca-app-pub-1287355220585536~4125519824",
+    value: ADMOB_APP_ID,
     description: "AdMob App ID (required by Google Mobile Ads SDK on iOS)",
+  },
+  {
+    key:   "GADIsAdManagerApp",
+    // Must be explicitly false unless using Google Ad Manager (DFP).
+    // Omitting this causes a runtime warning from the SDK.
+    value: "false",
+    description: "Disable Ad Manager mode (not using DFP)",
+    isBool: true,
   },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function plistEntry(key, value) {
+function plistEntry(key, value, isBool = false) {
+  if (isBool) {
+    const boolTag = value === "false" ? "<false/>" : "<true/>";
+    return `\t<key>${key}</key>\n\t${boolTag}`;
+  }
   return `\t<key>${key}</key>\n\t<string>${value}</string>`;
 }
 
@@ -77,7 +93,7 @@ for (const entry of ENTRIES) {
   // Insert before the final </dict></plist>
   content = content.replace(
     /(\s*<\/dict>\s*<\/plist>\s*)$/,
-    `\n${plistEntry(entry.key, entry.value)}\n$1`
+    `\n${plistEntry(entry.key, entry.value, entry.isBool)}\n$1`
   );
   console.log(`✅  ${entry.key} — added`);
   console.log(`     ${entry.description}`);

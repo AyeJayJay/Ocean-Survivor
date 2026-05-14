@@ -110,7 +110,7 @@ export default function InterstitialAd({ onClose }: Props) {
         }}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontFamily: "'Segoe UI', sans-serif" }}>
+        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
           Loading ad…
         </div>
       </div>
@@ -131,7 +131,7 @@ export default function InterstitialAd({ onClose }: Props) {
       onPointerDown={(e) => e.stopPropagation()}
     >
       {!loaded ? (
-        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontFamily: "'Segoe UI', sans-serif" }}>
+        <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
           Loading ad…
         </div>
       ) : (
@@ -139,7 +139,7 @@ export default function InterstitialAd({ onClose }: Props) {
           <div style={{
             position: "absolute", top: 10, left: 12,
             fontSize: 9, color: "rgba(255,255,255,0.3)",
-            fontFamily: "'Segoe UI', sans-serif", letterSpacing: "0.05em",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", letterSpacing: "0.05em",
           }}>ADVERTISEMENT</div>
 
           <button
@@ -150,7 +150,7 @@ export default function InterstitialAd({ onClose }: Props) {
               border: "1px solid rgba(255,255,255,0.2)",
               color: countdown === 0 ? "white" : "rgba(255,255,255,0.4)",
               borderRadius: 20, padding: "3px 10px",
-              fontSize: 11, fontFamily: "'Segoe UI', sans-serif",
+              fontSize: 11, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               cursor: countdown === 0 ? "pointer" : "default",
               transition: "all 0.3s",
               pointerEvents: countdown === 0 ? "auto" : "none",
@@ -163,11 +163,11 @@ export default function InterstitialAd({ onClose }: Props) {
             <div style={{ fontSize: 56, marginBottom: 16 }}>{ad.icon}</div>
             <h2 style={{
               color: "white", margin: "0 0 10px",
-              fontSize: 22, fontFamily: "'Segoe UI', sans-serif", fontWeight: 700,
+              fontSize: 22, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontWeight: 700,
             }}>{ad.title}</h2>
             <p style={{
               color: "rgba(200,220,255,0.7)", margin: "0 0 28px",
-              fontSize: 14, fontFamily: "'Segoe UI', sans-serif", lineHeight: 1.6,
+              fontSize: 14, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", lineHeight: 1.6,
             }}>{ad.body}</p>
             <button
               onClick={() => analytics.track("interstitial_cta_click", { ad_title: ad.title })}
@@ -176,7 +176,7 @@ export default function InterstitialAd({ onClose }: Props) {
                 border: "none", borderRadius: 24,
                 color: "white", padding: "12px 36px",
                 fontSize: 15, fontWeight: 700,
-                fontFamily: "'Segoe UI', sans-serif",
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                 cursor: "pointer",
                 boxShadow: `0 4px 20px ${ad.ctaColor}55`,
               }}>{ad.cta}</button>
@@ -185,7 +185,7 @@ export default function InterstitialAd({ onClose }: Props) {
           <div style={{
             position: "absolute", bottom: 16,
             fontSize: 9, color: "rgba(255,255,255,0.2)",
-            fontFamily: "'Segoe UI', sans-serif",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           }}>Ad · Close available after {COUNTDOWN_SECS}s</div>
         </>
       )}

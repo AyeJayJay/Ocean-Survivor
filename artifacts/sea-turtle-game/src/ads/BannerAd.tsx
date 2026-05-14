@@ -167,14 +167,14 @@ export default function BannerAd({
               color: "white",
               fontSize: compact ? 10 : 12,
               fontWeight: 700,
-              fontFamily: "'Segoe UI', sans-serif",
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
               whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
             }}>{ad.headline}</div>
             {!compact && (
               <div style={{
                 color: "rgba(200,220,255,0.65)",
                 fontSize: 10,
-                fontFamily: "'Segoe UI', sans-serif",
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>{ad.sub}</div>
             )}
@@ -185,7 +185,7 @@ export default function BannerAd({
             color: "white",
             fontSize: compact ? 8 : 9,
             fontWeight: 700,
-            fontFamily: "'Segoe UI', sans-serif",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             padding: compact ? "2px 5px" : "3px 6px",
             flexShrink: 0,
           }}>MORE</div>
@@ -193,7 +193,7 @@ export default function BannerAd({
           <div style={{
             position: "absolute", top: 2, right: 4,
             fontSize: 7, color: "rgba(255,255,255,0.28)",
-            fontFamily: "'Segoe UI', sans-serif",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           }}>Ad</div>
         </div>
       )}
