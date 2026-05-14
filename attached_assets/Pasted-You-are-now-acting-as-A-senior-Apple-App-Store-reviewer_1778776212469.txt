@@ -1,0 +1,189 @@
+You are now acting as:
+
+A senior Apple App Store reviewer
+A top mobile game designer
+A mobile growth strategist
+A retention psychologist
+A UI/UX expert
+A successful hypercasual game studio consultant
+A monetization strategist
+A performance engineer
+
+Your task is to perform a COMPLETE launch-readiness audit for my web-based mobile game that will be packaged as an iOS app.
+
+I want this audit to determine BOTH:
+
+Whether Apple would approve the app
+Whether real players would actually enjoy, retain, and recommend the game
+
+This should simulate a REAL mobile game studio preparing for launch.
+
+Be brutally honest.
+
+PHASE 1 — APP STORE APPROVAL AUDIT
+
+Check for:
+
+Apple guideline violations
+Low-quality app risks
+“Website in a wrapper” risks
+Minimal functionality concerns
+Broken features
+Missing privacy/legal pages
+ATT/privacy issues
+Crashes/freezes
+Lag/performance problems
+WebView issues
+iPhone responsiveness
+Touch issues
+Accessibility problems
+Loading problems
+Security vulnerabilities
+Placeholder UI
+Weak onboarding
+Poor UX
+Excessive ads
+Spam-like behavior
+Missing metadata/assets
+Anything likely to cause rejection
+
+Provide:
+
+Severity levels
+Estimated rejection probability
+Exact fixes required
+PHASE 2 — PLAYER EXPERIENCE & ADDICTIVENESS AUDIT
+
+Analyze:
+
+First impression quality
+Visual appeal
+Emotional excitement
+“One more try” potential
+Gameplay satisfaction
+Difficulty balancing
+Reward systems
+Dopamine loops
+Progression systems
+Session replayability
+Frustration points
+Player motivation
+Fun factor
+Retention potential
+Viral/social-media potential
+TikTok clip potential
+Competitive/high-score addiction
+
+Estimate:
+
+Addictiveness score
+Retention score
+Commercial viability
+Viral potential
+Replayability
+Average session potential
+PHASE 3 — VISUAL POLISH AUDIT
+
+Identify every area that feels:
+
+Cheap
+Generic
+Amateur
+Empty
+Unfinished
+Outdated
+
+Review:
+
+Menus
+Fonts
+UI spacing
+Animations
+Transitions
+Effects
+Color palette
+Audio feedback
+Splash screens
+Game over screens
+Reward moments
+Score presentation
+Home screen appeal
+
+Determine whether this visually competes with successful App Store games.
+
+PHASE 4 — PLAYER PSYCHOLOGY ANALYSIS
+
+Determine:
+
+Why players would keep playing
+Why players would quit
+Whether the game creates emotional tension/reward cycles
+Whether rewards are frequent enough
+Whether gameplay becomes repetitive
+Whether players feel skill growth
+Whether players feel emotionally rewarded
+
+Identify:
+
+Missing psychological hooks
+Weak engagement loops
+Weak reward timing
+Weak progression systems
+PHASE 5 — AUTOMATIC IMPROVEMENT PLAN
+
+After the audit:
+
+Create a PRIORITIZED improvement roadmap
+Rank improvements by impact
+Identify “quick wins”
+Identify “high ROI” changes
+Identify “must-fix before launch” issues
+
+Then provide:
+
+Exact code-level recommendations
+UX recommendations
+UI recommendations
+Animation recommendations
+Retention recommendations
+Monetization recommendations
+Performance recommendations
+PHASE 6 — STUDIO EXECUTIVE VERDICT
+
+Answer these brutally honestly:
+
+Would this likely pass Apple review?
+Would players actually keep playing?
+Would players recommend it?
+Would TikTok creators post it?
+Does this feel commercially viable?
+Does this feel polished enough to compete?
+What is the SINGLE biggest weakness?
+What is the SINGLE biggest opportunity?
+OUTPUT FORMAT
+Executive Summary
+App Store Approval Score
+Rejection Risks
+Addictiveness Score
+Retention Potential
+Viral Potential
+Commercial Viability
+Visual Polish Review
+Player Psychology Breakdown
+Biggest Weaknesses
+Biggest Strengths
+Top 15 Improvements Before Launch
+Quick Wins With Highest Impact
+Must-Fix Issues Before App Store Submission
+Automatic Code/UX Recommendations
+Final Brutally Honest Verdict
+Estimated Success Probability (0–100)
+
+For EVERY issue:
+
+Explain why it matters
+Explain how it affects retention or approval
+Explain how it affects player psychology
+Provide an exact actionable fix
+
+Treat this like a real mobile game studio launch review before public release.
