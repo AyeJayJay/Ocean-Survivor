@@ -1,0 +1,235 @@
+You are a senior game design consultant, behavioral psychology expert, mobile gaming strategist, retention analyst, UI/UX specialist, and viral game growth expert.
+
+I want you to deeply analyze my game and determine:
+
+Whether players would actually enjoy it
+How addictive it is
+Whether it has viral potential
+If the presentation is appealing enough to attract players
+If the gameplay loop is strong enough to retain users
+Whether this feels like a polished mobile game people would recommend
+
+Audit EVERYTHING from the perspective of:
+
+Casual mobile players
+TikTok/social-media-driven audiences
+Younger audiences with short attention spans
+Competitive/leaderboard players
+App Store users quickly judging screenshots/gameplay
+
+Be brutally honest and extremely detailed.
+
+CORE ANALYSIS OBJECTIVES
+1. First Impression Audit
+
+Analyze the first 5 seconds of the experience.
+
+Determine:
+
+Is it visually appealing immediately?
+Does it feel modern?
+Does it look low-budget or polished?
+Would someone instantly close it?
+Is the hook strong enough?
+Does the game communicate what it is quickly?
+Does it feel exciting?
+Does it visually compete with successful mobile games?
+
+Score:
+
+Visual appeal
+Curiosity factor
+Excitement factor
+Professionalism
+App Store attractiveness
+2. Addictiveness & Retention Analysis
+
+Analyze the core gameplay loop.
+
+Determine:
+
+Is the gameplay satisfying?
+Does it trigger “one more try” behavior?
+Are rewards frequent enough?
+Is progression motivating?
+Is there dopamine feedback?
+Does the game create tension/release cycles?
+Are animations satisfying?
+Does the player feel improvement over time?
+Are there frustrating moments?
+Is the difficulty curve balanced?
+Is the gameplay repetitive too quickly?
+Does the game become boring?
+
+Identify:
+
+Retention weaknesses
+Replayability problems
+Grind fatigue
+Cognitive overload
+Lack of rewards
+Lack of purpose/goals
+
+Estimate:
+
+1-day retention potential
+7-day retention potential
+Session length potential
+Addictiveness score (0–100)
+3. Viral Potential Audit
+
+Determine if the game has:
+
+TikTok-worthy moments
+Shareability
+Funny/chaotic gameplay
+Competitive moments
+Skill expression
+“Streamer bait” moments
+Rage/funny replay potential
+High-score addiction
+Replay clips worth sharing
+
+Suggest:
+
+Viral mechanics to add
+Social features
+Leaderboards
+Challenges
+Unlock systems
+Reward systems
+Cosmetic systems
+Streak systems
+4. Visual Presentation & Polish
+
+Analyze:
+
+Art direction
+UI quality
+Font choices
+Color consistency
+Effects
+Motion design
+Menu polish
+Screen transitions
+Animations
+Audio feedback
+Juice/satisfaction
+
+Determine:
+
+Does it feel cheap?
+Does it feel unfinished?
+Does it feel premium?
+Does it feel like a real App Store game?
+
+Identify EXACT areas that make it look amateur.
+
+Suggest:
+
+Modern design improvements
+Better UX patterns
+More satisfying effects
+Better onboarding
+Better menus
+Better visual hierarchy
+5. Player Psychology Audit
+
+Analyze psychological engagement systems:
+
+Dopamine triggers
+Reward frequency
+Curiosity systems
+Anticipation
+Unlocks
+Variable rewards
+Loss aversion
+Near-miss mechanics
+Progression systems
+Habit-forming loops
+
+Determine:
+
+Why players WOULD continue playing
+Why players WOULD quit
+Whether motivation is intrinsic or weak
+6. Monetization Readiness
+
+Analyze:
+
+Whether users would spend money
+If the game feels valuable enough
+Cosmetic opportunities
+Battle pass potential
+Ad placement risks
+Rewarded ad opportunities
+Retention before monetization
+Whether monetization would hurt enjoyment
+
+Suggest ethical monetization improvements.
+
+7. Competitor Comparison
+
+Compare this game mentally to successful mobile games.
+
+Determine:
+
+What successful games it resembles
+Whether it feels derivative
+Whether it has a unique hook
+Whether it stands out enough
+What category it best fits
+
+Estimate:
+
+Market competitiveness
+Player appeal
+Niche size
+8. Brutally Honest Review
+
+Give a brutally honest section answering:
+
+Would real players actually keep playing this?
+Would streamers/content creators play this?
+Would people recommend this to friends?
+Does this feel commercially viable?
+Does this feel addictive?
+Is the game memorable?
+What is the biggest weakness?
+What is the strongest feature?
+
+Do NOT sugarcoat anything.
+
+OUTPUT FORMAT
+
+Use this exact structure:
+
+Executive Summary
+First Impression Score
+Addictiveness Analysis
+Retention Analysis
+Viral Potential
+Visual & UI Polish Review
+Player Psychology Audit
+Gameplay Loop Breakdown
+Biggest Weaknesses
+Biggest Strengths
+Reasons Players Would Quit
+Reasons Players Would Keep Playing
+Competitor Comparison
+Monetization Potential
+Top 10 Improvements To Increase Retention
+Top 10 Improvements To Increase Addictiveness
+Top 10 Improvements To Increase Viral Potential
+Brutally Honest Final Verdict
+Overall Commercial Potential Score (0–100)
+Estimated App Store Success Probability
+
+For every criticism:
+
+Explain WHY it matters psychologically
+Explain how it affects retention
+Explain how it affects first impressions
+Give specific actionable fixes
+
+Analyze the project like a professional mobile game studio preparing for launch.
