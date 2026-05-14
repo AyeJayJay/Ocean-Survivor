@@ -48,6 +48,9 @@ export class MainMenuScene extends Phaser.Scene {
     // Record today as a play day for streak tracking (idempotent — safe to call every visit)
     saveManager.recordPlayToday();
 
+    // Shift music to calm menu atmosphere (no-op if music hasn't started yet)
+    soundManager.setMusicIntensity("menu");
+
     this.buildBgShapes();
     this.buildUI();
     this.drawBackground();

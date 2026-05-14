@@ -212,6 +212,10 @@ export class GameScene extends Phaser.Scene {
     emitSceneChange({ scene: "Game" });
     this.emitState();
     analytics.track("game_start");
+
+    // Ensure music is running and shift to active gameplay atmosphere
+    if (!soundManager.musicMuted) soundManager.startMusic();
+    soundManager.setMusicIntensity("game");
   }
 
   update(_time: number, delta: number): void {
@@ -326,6 +330,7 @@ export class GameScene extends Phaser.Scene {
     if (this.gameState === "playing") {
       this.gameState = "paused";
       soundManager.playTap();
+      soundManager.pauseMusic();
       this.pauseBtn.setText("▶");
       this.pausePanel.setVisible(true);
       this.pauseOverlayGfx.setVisible(true);
@@ -333,6 +338,7 @@ export class GameScene extends Phaser.Scene {
     } else if (this.gameState === "paused") {
       this.gameState = "playing";
       soundManager.playTap();
+      soundManager.resumeMusic();
       this.pauseBtn.setText("⏸");
       this.pausePanel.setVisible(false);
       this.pauseOverlayGfx.setVisible(false);
@@ -569,6 +575,7 @@ export class GameScene extends Phaser.Scene {
     this.player.kill();
     soundManager.playDeath();
     this.cameras.main.shake(85, 0.013);
+    soundManager.setMusicIntensity("tense");
 
     this.speed = 0;
     this.obstacleManager.setSpeed(0);
@@ -588,6 +595,7 @@ export class GameScene extends Phaser.Scene {
     if (this.gameState !== "dead") return;
     this.reviveUsed = true;
     this.gameState = "playing";
+    soundManager.setMusicIntensity("game");
 
     // 1. Clear the obstacle that killed the player + anything in the next 260 px,
     //    so the turtle never instantly re-dies into the same column.

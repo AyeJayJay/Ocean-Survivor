@@ -35,6 +35,12 @@ class SoundManager {
   // Music nodes (kept alive for the loop)
   private musicNodes: AudioNode[] = [];
   private musicPlaying = false;
+  private musicTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+  // Stored references for dynamic intensity control
+  private droneGainNode: GainNode | null = null;
+  private midGainNode: GainNode | null = null;
+  private lfoGainNode: GainNode | null = null;
 
   // ── Context ──────────────────────────────────────────────────────────────────
 
@@ -66,7 +72,14 @@ class SoundManager {
 
   /**
    * Start looping ocean ambience (if not already playing).
-   * Built from filtered white noise + slow sine LFO + two oscillators.
+   *
+   * Layers:
+   *  1. Deep wave noise  — low-pass + band-pass filtered white noise, slow LFO swell
+   *  2. Surface shimmer  — band-pass noise at ~1.2 kHz, faster LFO
+   *  3. Sub-bass drone   — 55 Hz (A1) sine oscillator
+   *  4. Mid tone         — 130.8 Hz (C3) sine
+   *  5. Am7 chime accents — scheduled every 7–21 s
+   *  6. Whale glides     — rare (every 25–60 s), atmospheric glissando
    */
   startMusic(): void {
     const ctx = this.getCtx();
@@ -74,103 +87,135 @@ class SoundManager {
     this.musicPlaying = true;
 
     const t = ctx.currentTime;
+    const bufferSize = ctx.sampleRate * 4; // 4-second looping noise buffer
 
-    // ── White noise (ocean waves hiss) ────────────────────────────────────
-    const bufferSize = ctx.sampleRate * 4; // 4-second buffer that loops
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const makeNoise = (): AudioBufferSourceNode => {
+      const buf = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      src.start(t);
+      return src;
+    };
 
-    const noiseSource = ctx.createBufferSource();
-    noiseSource.buffer = noiseBuffer;
-    noiseSource.loop = true;
-    noiseSource.start(t);
-
-    // Low-pass + band-pass combination for a watery rumble
+    // ── Layer 1: deep wave noise ──────────────────────────────────────────
+    const deepNoise = makeNoise();
     const lpf = ctx.createBiquadFilter();
-    lpf.type = "lowpass";
-    lpf.frequency.value = 420;
-    lpf.Q.value = 0.8;
-
+    lpf.type = "lowpass"; lpf.frequency.value = 420; lpf.Q.value = 0.8;
     const bpf = ctx.createBiquadFilter();
-    bpf.type = "bandpass";
-    bpf.frequency.value = 180;
-    bpf.Q.value = 1.2;
+    bpf.type = "bandpass"; bpf.frequency.value = 180; bpf.Q.value = 1.2;
+    const deepGain = ctx.createGain();
+    deepGain.gain.value = 0.30;
+    deepNoise.connect(lpf); lpf.connect(bpf); bpf.connect(deepGain); deepGain.connect(this.musicGain);
 
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.value = 0.35;
-
-    noiseSource.connect(lpf);
-    lpf.connect(bpf);
-    bpf.connect(noiseGain);
-    noiseGain.connect(this.musicGain);
-
-    // ── Deep drone oscillator (sub-bass hum) ──────────────────────────────
-    const drone = ctx.createOscillator();
-    drone.type = "sine";
-    drone.frequency.value = 55; // A1 — deep underwater resonance
-    drone.start(t);
-
-    const droneGain = ctx.createGain();
-    droneGain.gain.value = 0.28;
-    drone.connect(droneGain);
-    droneGain.connect(this.musicGain);
-
-    // ── Gentle mid tone (C3 — peaceful depth) ────────────────────────────
-    const mid = ctx.createOscillator();
-    mid.type = "sine";
-    mid.frequency.value = 130.8; // C3
-    mid.start(t);
-
-    const midGain = ctx.createGain();
-    midGain.gain.value = 0.12;
-    mid.connect(midGain);
-    midGain.connect(this.musicGain);
-
-    // ── Slow LFO tremolo on noise (breathing ocean) ───────────────────────
+    // Slow LFO — breathing swell (~12.5 s cycle)
     const lfo = ctx.createOscillator();
-    lfo.type = "sine";
-    lfo.frequency.value = 0.08; // very slow, ~12s cycle
-    lfo.start(t);
-
+    lfo.type = "sine"; lfo.frequency.value = 0.08; lfo.start(t);
     const lfoGain = ctx.createGain();
     lfoGain.gain.value = 0.15;
-    lfo.connect(lfoGain);
-    lfoGain.connect(noiseGain.gain);
+    lfo.connect(lfoGain); lfoGain.connect(deepGain.gain);
+    this.lfoGainNode = lfoGain;
 
-    // ── Periodic high chime accents (bubble ping) ─────────────────────────
+    // ── Layer 2: surface shimmer noise ────────────────────────────────────
+    const surfNoise = makeNoise();
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = "bandpass"; hpf.frequency.value = 1200; hpf.Q.value = 1.8;
+    const surfGain = ctx.createGain();
+    surfGain.gain.value = 0.065;
+    surfNoise.connect(hpf); hpf.connect(surfGain); surfGain.connect(this.musicGain);
+
+    // Faster LFO — ripple shimmer (~4.5 s cycle)
+    const surfLfo = ctx.createOscillator();
+    surfLfo.type = "sine"; surfLfo.frequency.value = 0.22; surfLfo.start(t);
+    const surfLfoGain = ctx.createGain();
+    surfLfoGain.gain.value = 0.038;
+    surfLfo.connect(surfLfoGain); surfLfoGain.connect(surfGain.gain);
+
+    // ── Layer 3: sub-bass drone (A1 = 55 Hz) ─────────────────────────────
+    const drone = ctx.createOscillator();
+    drone.type = "sine"; drone.frequency.value = 55; drone.start(t);
+    const droneGain = ctx.createGain();
+    droneGain.gain.value = 0.28;
+    drone.connect(droneGain); droneGain.connect(this.musicGain);
+    this.droneGainNode = droneGain;
+
+    // ── Layer 4: mid tone (C3 = 130.8 Hz) ────────────────────────────────
+    const mid = ctx.createOscillator();
+    mid.type = "sine"; mid.frequency.value = 130.8; mid.start(t);
+    const midGain = ctx.createGain();
+    midGain.gain.value = 0.12;
+    mid.connect(midGain); midGain.connect(this.musicGain);
+    this.midGainNode = midGain;
+
+    // ── Layer 5: Am7 chime accents ────────────────────────────────────────
     const scheduleChime = () => {
       if (!this.musicPlaying || !ctx || !this.musicGain) return;
       const now = ctx.currentTime;
-      const chimeFreqs = [523, 659, 784, 1047]; // C5, E5, G5, C6
+      const chimeFreqs = [440, 523, 659, 784]; // A4, C5, E5, G5 (Am7 voicing)
       const freq = chimeFreqs[Math.floor(Math.random() * chimeFreqs.length)];
 
       const chimeOsc = ctx.createOscillator();
-      chimeOsc.type = "sine";
-      chimeOsc.frequency.value = freq;
-      chimeOsc.start(now);
-      chimeOsc.stop(now + 1.2);
+      chimeOsc.type = "sine"; chimeOsc.frequency.value = freq;
+      chimeOsc.start(now); chimeOsc.stop(now + 1.5);
 
       const chimeEnv = ctx.createGain();
       chimeEnv.gain.setValueAtTime(0, now);
-      chimeEnv.gain.linearRampToValueAtTime(0.06, now + 0.02);
-      chimeEnv.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+      chimeEnv.gain.linearRampToValueAtTime(0.052, now + 0.02);
+      chimeEnv.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
 
-      chimeOsc.connect(chimeEnv);
-      chimeEnv.connect(this.musicGain!);
+      chimeOsc.connect(chimeEnv); chimeEnv.connect(this.musicGain!);
       chimeOsc.onended = () => { chimeOsc.disconnect(); chimeEnv.disconnect(); };
 
-      // Schedule next chime 6–18 seconds later
-      const delay = 6000 + Math.random() * 12000;
-      setTimeout(scheduleChime, delay);
+      const delay = 7000 + Math.random() * 14000;
+      this.musicTimeouts.push(setTimeout(scheduleChime, delay));
     };
-    setTimeout(scheduleChime, 3000 + Math.random() * 5000);
+    this.musicTimeouts.push(setTimeout(scheduleChime, 3500 + Math.random() * 4500));
 
-    this.musicNodes = [noiseSource, drone, mid, lfo, noiseGain, droneGain, midGain, lfoGain, lpf, bpf];
+    // ── Layer 6: whale glide accents ──────────────────────────────────────
+    const scheduleWhale = () => {
+      if (!this.musicPlaying || !ctx || !this.musicGain) return;
+      const now = ctx.currentTime;
+      const startHz = 120 + Math.random() * 60;
+
+      const whaleOsc = ctx.createOscillator();
+      whaleOsc.type = "sine";
+      whaleOsc.frequency.setValueAtTime(startHz, now);
+      whaleOsc.frequency.linearRampToValueAtTime(startHz * 0.58, now + 3.5);
+      whaleOsc.frequency.linearRampToValueAtTime(startHz * 0.75, now + 6.5);
+      whaleOsc.start(now); whaleOsc.stop(now + 7.5);
+
+      const whaleLpf = ctx.createBiquadFilter();
+      whaleLpf.type = "lowpass"; whaleLpf.frequency.value = 500;
+
+      const whaleEnv = ctx.createGain();
+      whaleEnv.gain.setValueAtTime(0, now);
+      whaleEnv.gain.linearRampToValueAtTime(0.032, now + 1.0);
+      whaleEnv.gain.setValueAtTime(0.032, now + 6.0);
+      whaleEnv.gain.linearRampToValueAtTime(0, now + 7.5);
+
+      whaleOsc.connect(whaleLpf); whaleLpf.connect(whaleEnv); whaleEnv.connect(this.musicGain!);
+      whaleOsc.onended = () => { whaleOsc.disconnect(); whaleLpf.disconnect(); whaleEnv.disconnect(); };
+
+      const delay = 25000 + Math.random() * 35000; // 25–60 s between whale calls
+      this.musicTimeouts.push(setTimeout(scheduleWhale, delay));
+    };
+    this.musicTimeouts.push(setTimeout(scheduleWhale, 12000 + Math.random() * 18000));
+
+    this.musicNodes = [
+      deepNoise, surfNoise, drone, mid, lfo, surfLfo,
+      deepGain, surfGain, droneGain, midGain, lfoGain, surfLfoGain, lpf, bpf, hpf,
+    ];
   }
 
   stopMusic(): void {
     this.musicPlaying = false;
+    for (const id of this.musicTimeouts) clearTimeout(id);
+    this.musicTimeouts = [];
+    this.droneGainNode = null;
+    this.midGainNode = null;
+    this.lfoGainNode = null;
     for (const node of this.musicNodes) {
       try {
         if (node instanceof AudioScheduledSourceNode) node.stop();
@@ -178,6 +223,60 @@ class SoundManager {
       } catch { /* already stopped */ }
     }
     this.musicNodes = [];
+  }
+
+  /**
+   * Temporarily fade music to silence (used when the game is paused).
+   * Preserves musicPlaying = true so resumeMusic() can restore volume.
+   */
+  pauseMusic(): void {
+    if (!this.musicGain || !this.ctx || !this.musicPlaying) return;
+    const t = this.ctx.currentTime;
+    this.musicGain.gain.cancelScheduledValues(t);
+    this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, t);
+    this.musicGain.gain.linearRampToValueAtTime(0, t + 0.6);
+  }
+
+  /**
+   * Restore music volume after pauseMusic(). No-op if music is muted or not playing.
+   */
+  resumeMusic(): void {
+    if (!this.musicGain || !this.ctx || !this.musicPlaying) return;
+    if (saveManager.musicMuted) return;
+    const t = this.ctx.currentTime;
+    this.musicGain.gain.cancelScheduledValues(t);
+    this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, t);
+    this.musicGain.gain.linearRampToValueAtTime(MUSIC_MASTER, t + 0.6);
+  }
+
+  /**
+   * Shift the ambient atmosphere to match game context.
+   * @param level "menu" = calm; "game" = active; "tense" = subdued (after death)
+   */
+  setMusicIntensity(level: "menu" | "game" | "tense"): void {
+    if (!this.ctx || !this.droneGainNode) return;
+    const t = this.ctx.currentTime;
+    const RAMP = 2.0;
+
+    const droneTarget = level === "menu" ? 0.20 : level === "game" ? 0.28 : 0.14;
+    const midTarget   = level === "menu" ? 0.09 : level === "game" ? 0.12 : 0.06;
+    const lfoTarget   = level === "menu" ? 0.11 : level === "game" ? 0.15 : 0.07;
+
+    this.droneGainNode.gain.cancelScheduledValues(t);
+    this.droneGainNode.gain.setValueAtTime(this.droneGainNode.gain.value, t);
+    this.droneGainNode.gain.linearRampToValueAtTime(droneTarget, t + RAMP);
+
+    if (this.midGainNode) {
+      this.midGainNode.gain.cancelScheduledValues(t);
+      this.midGainNode.gain.setValueAtTime(this.midGainNode.gain.value, t);
+      this.midGainNode.gain.linearRampToValueAtTime(midTarget, t + RAMP);
+    }
+
+    if (this.lfoGainNode) {
+      this.lfoGainNode.gain.cancelScheduledValues(t);
+      this.lfoGainNode.gain.setValueAtTime(this.lfoGainNode.gain.value, t);
+      this.lfoGainNode.gain.linearRampToValueAtTime(lfoTarget, t + RAMP);
+    }
   }
 
   // ── SFX ───────────────────────────────────────────────────────────────────
