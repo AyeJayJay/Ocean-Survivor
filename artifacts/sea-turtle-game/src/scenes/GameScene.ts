@@ -70,6 +70,10 @@ export class GameScene extends Phaser.Scene {
   private nearMissCooldown = 0;
   private lastNearMissScore = -999;
 
+  // Revive shield (drawn during invincibility window)
+  private reviveGfx!: Phaser.GameObjects.Graphics;
+  private invincibleUntil = 0; // Phaser time.now timestamp; 0 = not invincible
+
   // State
   private gameState: GameState = "playing";
   private transitioning = false; // guard against duplicate scene.start() on rapid restart/death
@@ -112,6 +116,10 @@ export class GameScene extends Phaser.Scene {
 
     // Near-miss edge flash (depth 49 — just below death flash)
     this.nearMissGfx = this.add.graphics().setDepth(49);
+
+    // Revive shield ring (depth 25 — just above player)
+    this.reviveGfx = this.add.graphics().setDepth(25);
+    this.invincibleUntil = 0;
 
     // Progression manager (depth 2, 3)
     this.progressionManager = new ProgressionManager(this, () => {
@@ -178,6 +186,7 @@ export class GameScene extends Phaser.Scene {
       this.bgGfx?.destroy();
       this.fxGfx?.destroy();
       this.nearMissGfx?.destroy();
+      this.reviveGfx?.destroy();
       this.pauseOverlayGfx?.destroy();
     }, this);
 
@@ -238,14 +247,34 @@ export class GameScene extends Phaser.Scene {
       // Near-miss check
       this.checkNearMiss();
 
-      // Collision / out of bounds
-      const hitObstacle = this.obstacleManager.checkObstacleCollision(this.player.x, this.player.y);
+      // ── Invincibility shield ring ────────────────────────────────────────────
+      this.reviveGfx.clear();
+      const isInvincible = this.time.now < this.invincibleUntil;
+      if (isInvincible) {
+        const remaining = this.invincibleUntil - this.time.now;
+        const progress  = 1 - remaining / 2500;                // 0 → 1 over 2.5 s
+        const alpha     = Phaser.Math.Clamp(0.75 - progress * 0.65, 0.05, 0.75);
+        const pulse     = Math.sin(this.time.now * 0.008) * 4; // oscillating radius
+        const r1 = PLAYER_RADIUS + 10 + pulse;
+        const r2 = PLAYER_RADIUS + 18 + pulse;
+        // Inner ring
+        this.reviveGfx.lineStyle(2.5, 0x40ffcc, alpha);
+        this.reviveGfx.strokeCircle(this.player.x, this.player.y, r1);
+        // Outer softer ring
+        this.reviveGfx.lineStyle(1.5, 0x80ffe8, alpha * 0.45);
+        this.reviveGfx.strokeCircle(this.player.x, this.player.y, r2);
+      }
+
+      // ── Collision / out of bounds (skipped during invincibility) ────────────
+      const hitObstacle = !isInvincible &&
+        this.obstacleManager.checkObstacleCollision(this.player.x, this.player.y);
       const outOfBounds = this.player.isOutOfBounds();
       if (hitObstacle || outOfBounds) {
         this.onPlayerDeath();
       }
     } else {
       // Dead state: still animate (death flicker)
+      this.reviveGfx.clear();
       this.player.update();
     }
   }
@@ -479,12 +508,91 @@ export class GameScene extends Phaser.Scene {
     this.reviveUsed = true;
     this.gameState = "playing";
 
-    this.speed = INITIAL_SPEED;
-    this.obstacleManager.setSpeed(this.speed);
+    // 1. Clear the obstacle that killed the player + anything in the next 260 px,
+    //    so the turtle never instantly re-dies into the same column.
+    this.obstacleManager.clearNearPlayer(PLAYER_X);
+
+    // 2. Grant 2.5 s of invincibility — shield ring renders in update().
+    this.invincibleUntil = this.time.now + 2500;
+
+    // 3. Revive the player physics & reset flicker alpha.
     this.player.revive(this.deathY);
+
+    // 4. Resume at 40% of starting speed so the player can orient themselves;
+    //    the normal SPEED_RAMP in update() takes over from here.
+    this.speed = INITIAL_SPEED * 0.4;
+    this.obstacleManager.setSpeed(this.speed);
+
+    // 5. Visual + audio celebration.
+    this.spawnReviveEffect();
+    soundManager.playCollect(); // warm chime — "you earned it"
 
     analytics.track("game_revived", { score: this.score });
     this.emitState();
+  }
+
+  private spawnReviveEffect(): void {
+    const cx = PLAYER_X;
+    const cy = this.deathY;
+
+    // ── Soft green flash (much gentler than the red death flash) ─────────────
+    const flash = this.add.graphics().setDepth(50);
+    flash.fillStyle(0x20ff80, 0.18);
+    flash.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.tweens.add({
+      targets: flash, alpha: 0, duration: 400,
+      onComplete: () => flash.destroy(),
+    });
+
+    // ── Bubble burst — 10 small circles radiating outward ────────────────────
+    for (let i = 0; i < 10; i++) {
+      const angle  = (i / 10) * Math.PI * 2;
+      const dist   = 48 + Math.random() * 32;
+      const radius = 3 + Math.random() * 3.5;
+      const bubble = this.add.graphics().setDepth(30);
+      bubble.fillStyle(0x40ffcc, 0.85);
+      bubble.fillCircle(0, 0, radius);
+      bubble.lineStyle(1, 0xffffff, 0.4);
+      bubble.strokeCircle(0, 0, radius);
+      bubble.setPosition(cx, cy);
+      this.tweens.add({
+        targets: bubble,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        alpha: 0,
+        duration: 520 + Math.random() * 180,
+        ease: "Power2",
+        onComplete: () => bubble.destroy(),
+      });
+    }
+
+    // ── "Keep Swimming! 🐢" popup text ───────────────────────────────────────
+    const txt = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT * 0.36, "Keep Swimming! 🐢", {
+      fontSize: "22px",
+      fontFamily: "Arial Black, sans-serif",
+      color: "#80ffcc",
+      stroke: "#003322",
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(51).setAlpha(0).setScale(0.7);
+
+    this.tweens.add({
+      targets: txt,
+      alpha: 1,
+      scale: 1.05,
+      duration: 240,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: txt,
+          alpha: 0,
+          y: GAME_HEIGHT * 0.29,
+          duration: 650,
+          delay: 500,
+          ease: "Power2",
+          onComplete: () => txt.destroy(),
+        });
+      },
+    });
   }
 
   private goToGameOver(): void {

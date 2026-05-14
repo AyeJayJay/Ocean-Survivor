@@ -70,6 +70,7 @@ export class Player {
 
   revive(atY: number): void {
     this.alive = true;
+    this.gfx.setAlpha(1); // reset death-flicker alpha before first update
     this.sprite.setY(atY);
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocityY(-150); // gentle upward nudge

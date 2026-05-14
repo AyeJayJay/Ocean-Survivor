@@ -219,6 +219,16 @@ export class ObstacleManager {
     return false;
   }
 
+  /**
+   * Removes all obstacles and shells that are behind or within `clearAheadPx`
+   * pixels in front of the player's X position.  Call this on revive so the
+   * turtle respawns into a clean lane instead of the obstacle that killed it.
+   */
+  clearNearPlayer(playerX: number, clearAheadPx = 260): void {
+    this.obstacles = this.obstacles.filter(obs => obs.x > playerX + clearAheadPx);
+    this.shells    = this.shells.filter(sh  => sh.x  > playerX + clearAheadPx);
+  }
+
   destroy(): void {
     this.gfx.destroy();
     this.shellGfx.destroy();
