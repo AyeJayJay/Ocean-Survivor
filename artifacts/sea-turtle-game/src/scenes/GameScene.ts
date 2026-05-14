@@ -265,10 +265,14 @@ export class GameScene extends Phaser.Scene {
         this.reviveGfx.strokeCircle(this.player.x, this.player.y, r2);
       }
 
-      // ── Collision / out of bounds (skipped during invincibility) ────────────
+      // ── Collision / out of bounds ────────────────────────────────────────────
+      // Both checks are skipped during invincibility. outOfBounds must also be
+      // skipped because after a long ad (15 s) the physics body drifts far below
+      // the screen; body.reset() in revive() snaps it back, but there can be a
+      // single-frame window before Phaser fully reconciles the new position.
       const hitObstacle = !isInvincible &&
         this.obstacleManager.checkObstacleCollision(this.player.x, this.player.y);
-      const outOfBounds = this.player.isOutOfBounds();
+      const outOfBounds = !isInvincible && this.player.isOutOfBounds();
       if (hitObstacle || outOfBounds) {
         this.onPlayerDeath();
       }

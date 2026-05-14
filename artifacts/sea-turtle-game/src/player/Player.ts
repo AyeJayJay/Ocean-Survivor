@@ -71,17 +71,21 @@ export class Player {
   revive(atY: number): void {
     this.alive = true;
     this.gfx.setAlpha(1); // reset death-flicker alpha before first update
-    this.sprite.setY(atY);
+
+    // body.reset() is the ONLY correct way to teleport an arcade physics body.
+    // sprite.setY() only moves the display object; the physics engine overwrites
+    // it on the next step from the body's internal position — which can be thousands
+    // of pixels off-screen after the player has been dead for a full ad duration.
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
-    body.setVelocityY(-150); // gentle upward nudge
-    body.setGravityY(GRAVITY_Y);
+    body.reset(this.sprite.x, atY); // teleports body + clears all accumulated velocity
+    body.setVelocityY(-150);         // gentle upward nudge after reset
+    body.setGravityY(GRAVITY_Y);     // restore normal gravity (kill() reduced it to 0.6×)
   }
 
   reset(x: number, y: number): void {
     this.alive = true;
-    this.sprite.setPosition(x, y);
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
-    body.setVelocity(0, 0);
+    body.reset(x, y); // teleports body + clears velocity (sprite position auto-synced)
     body.setGravityY(GRAVITY_Y);
     this.gfx.setAlpha(1);
   }
