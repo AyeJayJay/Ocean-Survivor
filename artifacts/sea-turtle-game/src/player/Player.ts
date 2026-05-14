@@ -66,6 +66,13 @@ export class Player {
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
     body.setVelocityY(-200); // small death bounce
     body.setGravityY(GRAVITY_Y * 0.6);
+    // Expressive death spin — makes death memorable and clip-worthy
+    this.sprite.scene.tweens.add({
+      targets: this.gfx,
+      rotation: this.gfx.rotation + Math.PI * 2.5,
+      duration: 700,
+      ease: "Power2",
+    });
   }
 
   revive(atY: number): void {
@@ -103,13 +110,13 @@ export class Player {
     this.gfx.x = this.sprite.x;
     this.gfx.y = this.sprite.y;
 
-    // Tilt based on vertical velocity
-    const vy = (this.sprite.body as Phaser.Physics.Arcade.Body).velocity.y;
-    this.gfx.rotation = Phaser.Math.Clamp(vy * 0.0022, -0.55, 1.25);
-
-    // Flash on death (simple alpha flicker)
     if (!this.alive) {
+      // Flash on death; rotation is owned by the kill() tween — don't override it
       this.gfx.setAlpha(0.75 + Math.sin(Date.now() * 0.025) * 0.25);
+    } else {
+      // Tilt based on vertical velocity
+      const vy = (this.sprite.body as Phaser.Physics.Arcade.Body).velocity.y;
+      this.gfx.rotation = Phaser.Math.Clamp(vy * 0.0022, -0.55, 1.25);
     }
   }
 

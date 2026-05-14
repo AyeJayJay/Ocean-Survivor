@@ -6,7 +6,7 @@
  *   completed achievements, daily challenge state.
  */
 
-export type SkinId = "baby" | "green_sea" | "glowing" | "golden" | "cyber" | "coral";
+export type SkinId = "baby" | "survivor" | "green_sea" | "glowing" | "golden" | "cyber" | "coral";
 
 export interface DailyChallengeState {
   date: string;       // ISO date "YYYY-MM-DD"
@@ -30,6 +30,8 @@ export interface SaveData {
   sfxMuted: boolean;
   bestRunShells: number; // max shells collected in a single run
   adConsentGiven: boolean | null;  // null = not yet asked, true = accepted, false = declined
+  streakDays: number;       // consecutive days played
+  lastPlayedDate: string;   // ISO date "YYYY-MM-DD" of last recorded play
 }
 
 const SAVE_KEY = "os_save_v2";
@@ -52,6 +54,8 @@ const DEFAULT_SAVE: SaveData = {
   sfxMuted: false,
   bestRunShells: 0,
   adConsentGiven: null,
+  streakDays: 0,
+  lastPlayedDate: "",
 };
 
 class SaveManager {
@@ -123,6 +127,7 @@ class SaveManager {
   get sfxMuted(): boolean { return this.data.sfxMuted; }
   get bestRunShells(): number { return this.data.bestRunShells; }
   get adConsentGiven(): boolean | null { return this.data.adConsentGiven ?? null; }
+  get currentStreak(): number { return this.data.streakDays; }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
@@ -189,6 +194,16 @@ class SaveManager {
     this.commit();
   }
 
+  /** Call once per app open (e.g. from MainMenu create). Guards against double-counting. */
+  recordPlayToday(): void {
+    const today = new Date().toISOString().slice(0, 10);
+    if (this.data.lastPlayedDate === today) return;
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    this.data.streakDays = this.data.lastPlayedDate === yesterday ? this.data.streakDays + 1 : 1;
+    this.data.lastPlayedDate = today;
+    this.commit();
+  }
+
   // ── Unlock evaluation ──────────────────────────────────────────────────────
 
   checkNewUnlocks(): SkinId[] {
@@ -199,6 +214,7 @@ class SaveManager {
       if (!already.has(id) && cond) newly.push(id);
     };
 
+    check("survivor",  this.data.gamesPlayed >= 3);
     check("green_sea", this.data.highScore >= 50);
     check("glowing",   this.data.highScore >= 150);
     check("golden",    this.data.lifetimeShells >= 500);

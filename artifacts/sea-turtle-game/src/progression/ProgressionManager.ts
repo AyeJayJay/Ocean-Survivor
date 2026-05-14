@@ -76,6 +76,9 @@ export class ProgressionManager {
     return Math.min(this._stage / 4, 1);
   }
 
+  /** Total seconds survived this run — used for the restoration HUD bar. */
+  get survivalSeconds(): number { return this.elapsed; }
+
   constructor(scene: Phaser.Scene, onMilestoneReached?: () => void) {
     this.scene = scene;
     this.onMilestone = onMilestoneReached ?? null;

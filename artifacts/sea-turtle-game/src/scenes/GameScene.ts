@@ -4,6 +4,7 @@ import {
   SPEED_RAMP, MAX_SPEED, GAP_SHRINK_RATE, MIN_GAP,
   SCORE_DIST_DIVISOR, SCENE,
   PLAYER_RADIUS, NEAR_MISS_THRESHOLD, SCORE_MILESTONES,
+  SPEED_RAMP_WARMUP_SECS, SPEED_RAMP_WARMUP_FACTOR,
 } from "../game/GameConfig";
 import { Player } from "../player/Player";
 import { ObstacleManager } from "../obstacles/ObstacleManager";
@@ -60,6 +61,8 @@ export class GameScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private shellText!: Phaser.GameObjects.Text;
   private pauseBtn!: Phaser.GameObjects.Text;
+  private bestScoreHudText!: Phaser.GameObjects.Text;
+  private restorationBarGfx!: Phaser.GameObjects.Graphics;
 
   // Pause overlay
   private pausePanel!: Phaser.GameObjects.Container;
@@ -144,6 +147,21 @@ export class GameScene extends Phaser.Scene {
       color: "#ffd84a", stroke: "#4a2800", strokeThickness: 2,
     }).setOrigin(1, 0).setDepth(30);
 
+    // Personal-best ghost — dims out once player beats it
+    this.bestScoreHudText = this.add.text(GAME_WIDTH / 2, 82,
+      this.bestScore > 0 ? `Best ${this.bestScore}` : "", {
+        fontSize: "14px", fontFamily: "Arial, sans-serif",
+        color: "rgba(255,220,80,0.38)", stroke: "#000000", strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(30);
+
+    // Restoration progress bar (bottom-left, depth 31)
+    this.add.text(14, GAME_HEIGHT - 44, "🌊 OCEAN", {
+      fontSize: "8px", fontFamily: "Arial, sans-serif",
+      color: "rgba(60,160,110,0.5)", letterSpacing: 1,
+    }).setDepth(31);
+    this.restorationBarGfx = this.add.graphics().setDepth(31);
+    this.drawRestorationBar(0);
+
     // Pause button (top-left, safe below banner ad)
     this.pauseBtn = this.add.text(18, 52, "⏸", {
       fontSize: "22px", fontFamily: "Arial, sans-serif",
@@ -188,6 +206,7 @@ export class GameScene extends Phaser.Scene {
       this.nearMissGfx?.destroy();
       this.reviveGfx?.destroy();
       this.pauseOverlayGfx?.destroy();
+      this.restorationBarGfx?.destroy();
     }, this);
 
     emitSceneChange({ scene: "Game" });
@@ -210,12 +229,15 @@ export class GameScene extends Phaser.Scene {
     this.drawBackground();
 
     if (this.gameState === "playing") {
-      // Difficulty ramp
-      this.speed = Math.min(this.speed + SPEED_RAMP * dt, MAX_SPEED);
+      // Difficulty ramp — gentler warmup so new players survive long enough to get hooked
+      const sessionElapsed = (Date.now() - this.sessionStartTime) / 1000;
+      const rampFactor = sessionElapsed < SPEED_RAMP_WARMUP_SECS ? SPEED_RAMP_WARMUP_FACTOR : 1.0;
+      this.speed = Math.min(this.speed + SPEED_RAMP * rampFactor * dt, MAX_SPEED);
       this.obstacleManager.setSpeed(this.speed);
 
       // Progression
       this.progressionManager.update(dt, this.scrollX);
+      this.drawRestorationBar(this.progressionManager.survivalSeconds);
 
       // Update gameplay objects
       this.player.update();
@@ -228,6 +250,10 @@ export class GameScene extends Phaser.Scene {
         this.score = newScore;
         this.scoreText.setText(this.score.toString());
         this.checkScoreMilestone(newScore);
+        // Hide personal-best ghost once it's been beaten
+        if (this.bestScore > 0) {
+          this.bestScoreHudText.setVisible(this.score < this.bestScore);
+        }
       }
 
       // Gap shrink
@@ -242,6 +268,7 @@ export class GameScene extends Phaser.Scene {
         soundManager.playCollect();
         this.shellText.setText(`🐚 ${this.obstacleManager.shellsCollected}`);
         this.spawnScorePopup(1);
+        this.spawnShellParticles(this.player.x, this.player.y);
       }
 
       // Near-miss check
@@ -468,6 +495,55 @@ export class GameScene extends Phaser.Scene {
 
   // ── Score popup (per-shell) ────────────────────────────────────────────────────
 
+  /** Gold dust burst when the turtle collects a shell. */
+  private spawnShellParticles(cx: number, cy: number): void {
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const dist  = 18 + Math.random() * 22;
+      const dot   = this.add.graphics().setDepth(35);
+      dot.fillStyle(0xffd84a, 0.9);
+      dot.fillCircle(0, 0, 2 + Math.random() * 2);
+      dot.setPosition(cx, cy);
+      this.tweens.add({
+        targets: dot,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist,
+        alpha: 0,
+        scaleX: 0.3, scaleY: 0.3,
+        duration: 360 + Math.random() * 130,
+        ease: "Power2",
+        onComplete: () => dot.destroy(),
+      });
+    }
+  }
+
+  /**
+   * Draws the ocean-restoration progress bar at the bottom-left of the HUD.
+   * @param survivalSecs seconds survived this run (0–150+)
+   */
+  private drawRestorationBar(survivalSecs: number): void {
+    const g = this.restorationBarGfx;
+    g.clear();
+
+    const fraction = Math.min(survivalSecs / 150, 1);
+    const barW = 120;
+    const barH = 5;
+    const barX = 14;
+    const barY = GAME_HEIGHT - 30;
+
+    // Track
+    g.fillStyle(0x000000, 0.32);
+    g.fillRoundedRect(barX, barY, barW, barH, 3);
+
+    // Stage-tinted fill
+    const stage = this.progressionManager?.stage ?? 0;
+    const colors = [0x204060, 0x1a7040, 0x30a060, 0x20d080, 0x40ffaa];
+    g.fillStyle(colors[Math.min(stage, 4)], 0.85);
+    if (fraction > 0) {
+      g.fillRoundedRect(barX, barY, Math.max(6, fraction * barW), barH, 3);
+    }
+  }
+
   private spawnScorePopup(count: number): void {
     const x = PLAYER_X + 55;
     const y = this.player.y - 20;
@@ -492,6 +568,7 @@ export class GameScene extends Phaser.Scene {
     this.deathY = this.player.y;
     this.player.kill();
     soundManager.playDeath();
+    this.cameras.main.shake(85, 0.013);
 
     this.speed = 0;
     this.obstacleManager.setSpeed(0);

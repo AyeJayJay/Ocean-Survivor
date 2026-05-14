@@ -316,6 +316,62 @@ function drawCyber(g: Phaser.GameObjects.Graphics): void {
   g.beginPath(); g.moveTo(22, 1); g.lineTo(26, 2.5); g.strokePath();
 }
 
+// ── Survivor Turtle (unlock: play 3 games) ────────────────────────────────────
+// First unlockable skin — gives new players a win in their very first session.
+
+function drawSurvivor(g: Phaser.GameObjects.Graphics): void {
+  g.clear();
+
+  // Tail — deep ocean blue
+  g.fillStyle(0x0a3060, 1);
+  g.fillEllipse(-21, 0, 12, 7);
+
+  // Flippers
+  g.fillStyle(0x0e3e7a, 1);
+  g.fillEllipse(9, -18, 11, 22);
+  g.fillEllipse(9, 18, 11, 22);
+  g.fillEllipse(-12, -13, 9, 17);
+  g.fillEllipse(-12, 13, 9, 17);
+
+  // Shell — rich ocean blue
+  g.fillStyle(0x1258a8, 1);
+  g.fillEllipse(0, 0, 40, 32);
+
+  // Wave pattern on shell (approximated with line segments — Phaser Graphics has no bezierCurveTo)
+  g.lineStyle(2, 0x40a0ff, 0.65);
+  for (let i = 0; i < 3; i++) {
+    const wy = -6 + i * 5;
+    g.beginPath();
+    g.moveTo(-16, wy);
+    for (let x = -16; x <= 16; x += 2) {
+      g.lineTo(x, wy + Math.sin(((x + 16) / 32) * Math.PI * 2) * 4);
+    }
+    g.strokePath();
+  }
+
+  // Shimmer highlight
+  g.fillStyle(0x80c8ff, 0.28);
+  g.fillEllipse(-3, -5, 30, 24);
+
+  // Shell outline
+  g.lineStyle(1.5, 0x0a3060, 0.5);
+  g.strokeEllipse(0, 0, 16, 13);
+
+  // Head
+  g.fillStyle(0x1560b0, 1);
+  g.fillEllipse(21, -1, 19, 15);
+  g.fillStyle(0x80c8ff, 0.38);
+  g.fillEllipse(19, -3, 12, 9);
+
+  g.fillStyle(0x050e1a, 1);
+  g.fillCircle(27, -4, 3);
+  g.fillStyle(0xffffff, 1);
+  g.fillCircle(28, -5, 1.2);
+
+  g.lineStyle(1, 0x0a3060, 0.8);
+  g.beginPath(); g.moveTo(22, 1); g.lineTo(26, 2.5); g.strokePath();
+}
+
 // ── Coral Turtle (unlock: reach restoration milestone) ────────────────────────
 
 function drawCoral(g: Phaser.GameObjects.Graphics): void {
@@ -382,12 +438,13 @@ function drawCoral(g: Phaser.GameObjects.Graphics): void {
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 export const SKIN_DEFS: SkinDef[] = [
-  { id: "baby",      name: "Baby Turtle",    drawFn: drawBaby      },
-  { id: "green_sea", name: "Green Sea Turtle", drawFn: drawGreenSea },
-  { id: "glowing",   name: "Glowing Turtle", drawFn: drawGlowing   },
-  { id: "golden",    name: "Golden Turtle",  drawFn: drawGolden    },
-  { id: "cyber",     name: "Cyber Turtle",   drawFn: drawCyber     },
-  { id: "coral",     name: "Coral Turtle",   drawFn: drawCoral     },
+  { id: "baby",      name: "Baby Turtle",      drawFn: drawBaby      },
+  { id: "survivor",  name: "Ocean Survivor",   drawFn: drawSurvivor  },
+  { id: "green_sea", name: "Green Sea Turtle", drawFn: drawGreenSea  },
+  { id: "glowing",   name: "Glowing Turtle",   drawFn: drawGlowing   },
+  { id: "golden",    name: "Golden Turtle",    drawFn: drawGolden    },
+  { id: "cyber",     name: "Cyber Turtle",     drawFn: drawCyber     },
+  { id: "coral",     name: "Coral Turtle",     drawFn: drawCoral     },
 ];
 
 export function getSkinDef(id: SkinId): SkinDef {

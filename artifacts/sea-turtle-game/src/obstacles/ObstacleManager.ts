@@ -11,7 +11,8 @@ import {
   SPAWN_MARGIN,
   SHELL_RADIUS,
   SHELL_SPEED_RATIO,
-  SHELL_INTERVAL_MS,
+  SHELL_INTERVAL_MIN_MS,
+  SHELL_INTERVAL_MAX_MS,
   PLAYER_RADIUS,
 } from "../game/GameConfig";
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -65,6 +66,7 @@ export class ObstacleManager {
   private shells: Shell[] = [];
   private shellIdCounter = 0;
   private shellTimer = 0;
+  private nextShellInterval: number = SHELL_INTERVAL_MIN_MS + Math.random() * (SHELL_INTERVAL_MAX_MS - SHELL_INTERVAL_MIN_MS);
 
   private speed: number = INITIAL_SPEED;
   private currentGap: number = INITIAL_GAP;
@@ -92,6 +94,7 @@ export class ObstacleManager {
     this.obstacles = [];
     this.shells = [];
     this.shellTimer = 0;
+    this.nextShellInterval = SHELL_INTERVAL_MIN_MS + Math.random() * (SHELL_INTERVAL_MAX_MS - SHELL_INTERVAL_MIN_MS);
     this._shellsCollected = 0;
     this.speed = speed;
     this.currentGap = gap;
@@ -127,10 +130,11 @@ export class ObstacleManager {
     }
     this.shells = this.shells.filter(s => !s.collected && s.x > -40);
 
-    // ── Shell spawn timer ─────────────────────────────────────────────────────
+    // ── Shell spawn timer (randomised interval keeps players alert) ───────────
     this.shellTimer += delta;
-    if (this.shellTimer >= SHELL_INTERVAL_MS && this.obstacles.length > 0) {
+    if (this.shellTimer >= this.nextShellInterval && this.obstacles.length > 0) {
       this.shellTimer = 0;
+      this.nextShellInterval = SHELL_INTERVAL_MIN_MS + Math.random() * (SHELL_INTERVAL_MAX_MS - SHELL_INTERVAL_MIN_MS);
       this.spawnShell();
     }
 

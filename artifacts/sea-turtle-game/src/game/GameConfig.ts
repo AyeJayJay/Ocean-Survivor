@@ -25,6 +25,13 @@ export const GAP_SHRINK_RATE   = 0.25; // gap reduction per obstacle cleared
 export const INITIAL_SPEED     = 188;  // px/s scroll speed
 export const MAX_SPEED         = 340;  // px/s max scroll speed
 export const SPEED_RAMP        = 7;    // px/s² ramp (per second of play)
+
+// ── Difficulty warmup ─────────────────────────────────────────────────────────
+// Newcomers die before they're invested. Use a gentler ramp for the first 45s
+// so players survive long enough to care about the game.
+export const SPEED_RAMP_WARMUP_SECS   = 45;  // seconds at gentler ramp
+export const SPEED_RAMP_WARMUP_FACTOR = 0.3; // fraction of full SPEED_RAMP during warmup
+
 export const OBSTACLE_SPACING  = 310;  // px between obstacle pairs (x-axis)
 export const SPAWN_MARGIN      = 120;  // min px from top/bottom edge for gapY center
 
@@ -32,9 +39,10 @@ export const SPAWN_MARGIN      = 120;  // min px from top/bottom edge for gapY c
 export const NEAR_MISS_THRESHOLD = 28; // px beyond player radius to trigger near-miss
 
 // ── Shells (collectibles) ─────────────────────────────────────────────────────
-export const SHELL_RADIUS      = 14;   // visual + collision radius
-export const SHELL_INTERVAL_MS = 5000; // ms between shell spawns
-export const SHELL_SPEED_RATIO = 0.85; // shells move slightly slower than obstacles
+export const SHELL_RADIUS         = 14;   // visual + collision radius
+export const SHELL_INTERVAL_MIN_MS = 2200; // ms — fastest shell spawn interval
+export const SHELL_INTERVAL_MAX_MS = 5500; // ms — slowest shell spawn interval
+export const SHELL_SPEED_RATIO    = 0.85; // shells move slightly slower than obstacles
 
 // ── Scoring ───────────────────────────────────────────────────────────────────
 // Distance-based: score increments continuously as the turtle swims.

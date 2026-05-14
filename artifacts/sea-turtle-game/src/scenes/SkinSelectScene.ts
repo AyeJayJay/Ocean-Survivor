@@ -15,6 +15,7 @@ import { soundManager } from "../audio/SoundManager";
 // Unlock hints — mirrors SaveManager.checkNewUnlocks()
 const UNLOCK_HINTS: Record<SkinId, string> = {
   baby:      "Default skin",
+  survivor:  "Play 3 games",
   green_sea: "Score ≥ 50",
   glowing:   "Score ≥ 150",
   golden:    "500 lifetime shells",

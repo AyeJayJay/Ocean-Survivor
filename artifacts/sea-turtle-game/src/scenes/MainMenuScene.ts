@@ -45,6 +45,9 @@ export class MainMenuScene extends Phaser.Scene {
     this.fxGfx = this.add.graphics().setDepth(1);
     this.turtleGfx = this.add.graphics().setDepth(10);
 
+    // Record today as a play day for streak tracking (idempotent — safe to call every visit)
+    saveManager.recordPlayToday();
+
     this.buildBgShapes();
     this.buildUI();
     this.drawBackground();
@@ -120,6 +123,15 @@ export class MainMenuScene extends Phaser.Scene {
       this.add.text(cx, GAME_HEIGHT * 0.14 + 104, `Best: ${hs}`, {
         fontSize: "17px", fontFamily: "Arial, sans-serif",
         color: "#ffd84a", stroke: "#2a1800", strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(20);
+    }
+
+    // Streak counter (only shown once player has a multi-day streak)
+    const streak = saveManager.currentStreak;
+    if (streak >= 2) {
+      this.add.text(cx, GAME_HEIGHT * 0.14 + 128, `\uD83D\uDD25 ${streak} day streak!`, {
+        fontSize: "13px", fontFamily: "Arial, sans-serif",
+        color: "#ff9f3f", stroke: "#2a0800", strokeThickness: 2,
       }).setOrigin(0.5).setDepth(20);
     }
 
