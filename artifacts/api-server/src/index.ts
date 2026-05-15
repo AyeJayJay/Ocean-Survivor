@@ -1,33 +1,12 @@
-import { runMigrations } from "stripe-replit-sync";
-import { getStripeSync } from "./stripeClient";
 import app from "./app";
 import { logger } from "./lib/logger";
 
-async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    logger.warn("DATABASE_URL not set — skipping Stripe initialization");
-    return;
-  }
-
-  try {
-    logger.info("Initializing Stripe schema...");
-    await runMigrations({ databaseUrl, schema: "stripe" });
-    logger.info("Stripe schema ready");
-
-    const stripeSync = await getStripeSync();
-
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
-    await stripeSync.findOrCreateManagedWebhook(`${webhookBaseUrl}/api/stripe/webhook`);
-    logger.info("Stripe webhook configured");
-
-    stripeSync.syncBackfill()
-      .then(() => logger.info("Stripe data synced"))
-      .catch((err) => logger.error({ err }, "Stripe sync error"));
-  } catch (err) {
-    logger.error({ err }, "Stripe initialization failed — payments will be unavailable");
-  }
-}
+/*
+ * Stripe initialization is disabled for App Store submission.
+ * Donations are off (DONATIONS_ENABLED = false in the frontend) and Stripe
+ * routes return safe stubs. Restore the original initStripe() implementation
+ * once the LLC is established and ready for payments.
+ */
 
 const rawPort = process.env["PORT"];
 if (!rawPort) {
@@ -38,8 +17,6 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
-
-await initStripe();
 
 app.listen(port, (err) => {
   if (err) {

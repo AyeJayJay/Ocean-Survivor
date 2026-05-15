@@ -11,7 +11,6 @@ import { adFrequencyManager } from "./ads/AdFrequencyManager";
 import { analytics } from "./analytics/Analytics";
 import { soundManager } from "./audio/SoundManager";
 import { saveManager } from "./save/SaveManager";
-import DonateModal from "./pages/DonateModal";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AboutScreen from "./pages/AboutScreen";
 import TermsOfService from "./pages/TermsOfService";
@@ -115,7 +114,6 @@ function GameShell() {
   const deathTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [soundMuted, setSoundMuted] = useState(() => soundManager.sfxMuted);
-  const [showDonate, setShowDonate] = useState(false);
 
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const toastKeyRef = useRef(0);
@@ -431,10 +429,6 @@ function GameShell() {
           <AdErrorBoundary onError={() => handleReviveResult(false)}>
             <RewardedAd onComplete={handleReviveResult} />
           </AdErrorBoundary>
-        )}
-
-        {DONATIONS_ENABLED && showDonate && (
-          <DonateModal onClose={() => setShowDonate(false)} />
         )}
 
         <AdErrorBoundary onError={() => {}}>

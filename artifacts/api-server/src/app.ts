@@ -3,27 +3,15 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { WebhookHandlers } from "./webhookHandlers";
-
 const app: Express = express();
 
-// Register Stripe webhook route BEFORE other middleware (needs raw Buffer, not parsed JSON)
+// Stripe webhook — disabled for App Store submission; returns 200 so Stripe
+// does not retry. Re-enable by restoring the full WebhookHandlers call.
 app.post(
   "/api/stripe/webhook",
   express.raw({ type: "application/json" }),
-  async (req, res) => {
-    const signature = req.headers["stripe-signature"];
-    if (!signature) {
-      return res.status(400).json({ error: "Missing stripe-signature" });
-    }
-    try {
-      const sig = Array.isArray(signature) ? signature[0] : signature;
-      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
-      res.status(200).json({ received: true });
-    } catch (err: any) {
-      logger.error({ err }, "Webhook error");
-      res.status(400).json({ error: "Webhook processing error" });
-    }
+  (_req, res) => {
+    res.status(200).json({ received: true, disabled: true });
   }
 );
 

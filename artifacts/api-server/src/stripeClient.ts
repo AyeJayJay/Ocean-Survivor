@@ -33,8 +33,8 @@ async function getCredentials(): Promise<{ publishableKey: string; secretKey: st
     throw new Error(`Failed to fetch Stripe credentials: ${resp.status} ${resp.statusText}`);
   }
 
-  const data = await resp.json();
-  const settings = data.items?.[0]?.settings;
+  const data = await resp.json() as Record<string, unknown>;
+  const settings = (data.items as any)?.[0]?.settings;
 
   if (!settings?.secret || !settings?.publishable) {
     throw new Error(

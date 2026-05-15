@@ -50,10 +50,10 @@ router.post("/analytics/events", async (req, res) => {
 
   try {
     await db.insert(analyticsEventsTable).values(rows);
-    res.json({ inserted: rows.length });
+    return res.json({ inserted: rows.length });
   } catch (err) {
     logger.error({ err }, "Failed to insert analytics events");
-    res.status(500).json({ error: "internal error" });
+    return res.status(500).json({ error: "internal error" });
   }
 });
 
