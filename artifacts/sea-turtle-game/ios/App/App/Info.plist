@@ -56,7 +56,7 @@
             Using the test ID in production will result in zero ad revenue.
         -->
         <key>GADApplicationIdentifier</key>
-        <string>ca-app-pub-3940256099942544~1458002511</string>
+        <string>ca-app-pub-1287355220585536~4125519824</string>
 
         <!--
             NSUserTrackingUsageDescription — required for ATT prompt on iOS 14+.
