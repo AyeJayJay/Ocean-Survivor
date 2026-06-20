@@ -6,12 +6,6 @@ const config: CapacitorConfig = {
   webDir: "dist/public",
 
   plugins: {
-    StatusBar: {
-      style: "DARK",  // must be uppercase: "DARK" | "LIGHT" | "DEFAULT"
-      backgroundColor: "#010c1a",
-      overlaysWebView: false,  // false = status bar above content, not over it
-    },
-
     // AdMob — initializeForTesting is controlled by USE_TEST_ADS in AdConfig.ts.
     // Do not add initializeForTesting here; it would override the build-env flag.
   },
