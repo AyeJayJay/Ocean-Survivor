@@ -10,6 +10,7 @@ import { AdmobBridge } from "./ads/AdmobBridge";
 import { adFrequencyManager } from "./ads/AdFrequencyManager";
 import { analytics } from "./analytics/Analytics";
 import { soundManager } from "./audio/SoundManager";
+import { OceanMusicManager } from "./audio/OceanMusicManager";
 import { saveManager } from "./save/SaveManager";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AboutScreen from "./pages/AboutScreen";
@@ -138,6 +139,13 @@ function GameShell() {
     const handleBackButton = (e: Event) => { e.preventDefault(); };
     document.addEventListener("backbutton", handleBackButton, false);
     return () => document.removeEventListener("backbutton", handleBackButton, false);
+  }, []);
+
+  // ── Init OceanMusicManager on first user interaction ──────────────────────────
+  useEffect(() => {
+    const initMusic = () => OceanMusicManager.getInstance().init();
+    window.addEventListener("pointerdown", initMusic, { once: true });
+    return () => window.removeEventListener("pointerdown", initMusic);
   }, []);
 
   // ── Ad consent + AdMob init on mount ──────────────────────────────────────────

@@ -6,6 +6,7 @@ import Phaser from "phaser";
 import { SCENE, GAME_WIDTH, GAME_HEIGHT } from "../game/GameConfig";
 import { emitSceneChange, emitPrivacyPolicy, emitAdPreferences, emitAbout } from "../game/EventBus";
 import { soundManager } from "../audio/SoundManager";
+import { OceanMusicManager } from "../audio/OceanMusicManager";
 import { saveManager } from "../save/SaveManager";
 
 export class SettingsScene extends Phaser.Scene {
@@ -56,6 +57,7 @@ export class SettingsScene extends Phaser.Scene {
       () => !saveManager.musicMuted,
       (on) => {
         soundManager.setMusicMuted(!on);
+        OceanMusicManager.getInstance().setMuted(!on);
         if (on) soundManager.startMusic();
       }
     );

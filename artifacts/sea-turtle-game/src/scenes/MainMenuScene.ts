@@ -17,6 +17,7 @@ import { emitSceneChange, emitOpenLeaderboard } from "../game/EventBus";
 import { saveManager } from "../save/SaveManager";
 import { getSkinDef } from "../player/SkinDefs";
 import { soundManager } from "../audio/SoundManager";
+import { OceanMusicManager } from "../audio/OceanMusicManager";
 import { dailyChallengeManager } from "../progression/DailyChallengeManager";
 
 interface BgShape {
@@ -55,6 +56,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     saveManager.recordPlayToday();
     soundManager.setMusicIntensity("menu");
+    OceanMusicManager.getInstance().setMenuTrack();
 
     this.buildBgShapes();
     this.buildUI();

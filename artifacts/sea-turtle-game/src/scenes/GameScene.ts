@@ -16,6 +16,7 @@ import type { SkinId } from "../save/SaveManager";
 import { emitGameState, emitSceneChange, emitAchievementToast, onCommand } from "../game/EventBus";
 import { leaderboardService } from "../services/LeaderboardService";
 import { soundManager } from "../audio/SoundManager";
+import { OceanMusicManager } from "../audio/OceanMusicManager";
 import { analytics } from "../analytics/Analytics";
 
 // ── Local types ────────────────────────────────────────────────────────────────
@@ -244,6 +245,7 @@ export class GameScene extends Phaser.Scene {
     // Ensure music is running and shift to active gameplay atmosphere
     if (!soundManager.musicMuted) soundManager.startMusic();
     soundManager.setMusicIntensity("game");
+    OceanMusicManager.getInstance().setGameTrack();
   }
 
   update(_time: number, delta: number): void {
@@ -266,6 +268,7 @@ export class GameScene extends Phaser.Scene {
       const rampFactor = sessionElapsed < SPEED_RAMP_WARMUP_SECS ? SPEED_RAMP_WARMUP_FACTOR : 1.0;
       this.speed = Math.min(this.speed + SPEED_RAMP * rampFactor * dt, MAX_SPEED);
       this.obstacleManager.setSpeed(this.speed);
+      OceanMusicManager.getInstance().updateGameSpeed(this.speed);
 
       // Progression
       this.progressionManager.update(dt, this.scrollX);

@@ -7,6 +7,7 @@ import {
 import { getSkinDef } from "../player/SkinDefs";
 import { saveManager } from "../save/SaveManager";
 import { soundManager } from "../audio/SoundManager";
+import { OceanMusicManager } from "../audio/OceanMusicManager";
 import type { SkinId } from "../save/SaveManager";
 
 interface GameOverData {
@@ -398,6 +399,7 @@ export class GameOverScene extends Phaser.Scene {
 
     // ── Notify React (triggers interstitial check + hides death buttons) ───────
 
+    OceanMusicManager.getInstance().setMenuTrack();
     emitSceneChange({ scene: "GameOver" });
     emitGameState({ state: "idle", score, bestScore, reviveAvailable: false, shellsThisRun: shellsCollected });
   }
